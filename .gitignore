@@ -1,0 +1,128 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.flutter/
+build/
+
+# Generated files
+**/GeneratedPluginRegistrant.*
+**/Generated.xcconfig
+
+# Android
+android/.gradle/
+android/app/build/
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Runner/GeneratedPluginRegistrant.h
+
+# macOS
+macos/Flutter/GeneratedPluginRegistrant.*
+
+# Linux
+linux/flutter/generated/
+
+# Windows
+windows/flutter/generated/
+
+# Web
+web/.dart_tool/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# Android Studio install directory
+android-studio/
+
+# Assets (ignore large media files; keep this if you upload assets separately)
+assets/
+
+# Common large archives and SDK installers
+*.tar.gz
+*.zip
+cmdline-tools.zip
+android-studio.tar.gz
+
+# VS Code
+.vscode/
+
+# Misc
+.DS_Store
+*~
+*.swp
+*.tmp
+*.bak
+
+# Dependency caches
+.pub-cache/
+.pub/
+
+# Secrets / env
+.env
+.env.*
+
+# Coverage and reports
+coverage/
+report/
+
+# Keystore and signing
+*.jks
+*.keystore
+
+# Platform specific
+/.gradle/
+.gradle/
+
+# Keep pubspec.lock for apps but not for packages (comment out if you want to ignore)
+# pubspec.lock
+
+# Keep these project files tracked (examples of what to commit):
+# - lib/ (your Dart source)
+# - pubspec.yaml, pubspec.lock
+# - assets/ (images, fonts)
+# - android/ (app source, except local.properties and build outputs)
+# - ios/ (app source, except Pods and build outputs)
+
+# Ignore platform folders entirely (if you don't want them in the repo)
+ios/
+macos/
+linux/
+windows/
