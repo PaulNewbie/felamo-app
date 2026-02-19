@@ -10,13 +10,15 @@ class LessonScreen extends StatefulWidget {
   final int aralinId;
   final String sessionId;
   final int antasId; 
+  final int lessonId;
 
   const LessonScreen({
     Key? key,
     required this.id,
     required this.sessionId,
     required this.antasId,
-    required this.aralinId, required lessonId,
+    required this.aralinId, 
+    required this.lessonId, 
   }) : super(key: key);
 
   @override
@@ -95,7 +97,16 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
           });
           print('Lessons fetched: ${lessons.length} lessons');
           if (lessons.isNotEmpty) {
-            initializeVideo(0);
+            // Find the index of the video the user actually clicked
+            int targetIndex = 0;
+            for (int i = 0; i < lessons.length; i++) {
+              if (lessons[i]['id'].toString() == widget.lessonId.toString()) {
+                targetIndex = i;
+                break;
+              }
+            }
+            // Play that specific video instead of 0
+            initializeVideo(targetIndex); 
           } else {
             print('No lessons found');
             if (mounted) {
@@ -244,7 +255,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'session_id': widget.sessionId,
-          'aralin_id': widget.aralinId,
+          'aralin_id': lessons[index]['id'],
         }),
       );
 

@@ -86,7 +86,7 @@ class _SignUpState extends State<SignUp> {
       final url = Uri.parse('https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/register-sent-otp.php');
 
       print('SEND OTP → $url');
-
+    
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -97,6 +97,8 @@ class _SignUpState extends State<SignUp> {
           'confirm_password': _confirmPasswordController.text.trim(),
         }),
       );
+      
+      print('RAW PHP RESPONSE: ${response.body}');
 
       print('Status: ${response.statusCode}');
 
@@ -106,6 +108,7 @@ class _SignUpState extends State<SignUp> {
         _showMessage('Server error (${response.statusCode})');
         return;
       }
+      print('RAW PHP RESPONSE: ${response.body}');
 
       final json = jsonDecode(response.body);
 
@@ -163,6 +166,8 @@ class _SignUpState extends State<SignUp> {
         }),
       );
 
+      print('RAW PHP RESPONSE: ${response.body}');
+
       if (!mounted) return;
 
       if (response.statusCode != 200) {
@@ -170,6 +175,7 @@ class _SignUpState extends State<SignUp> {
         return;
       }
 
+      print('RAW PHP RESPONSE: ${response.body}');
       final json = jsonDecode(response.body);
 
       if (json['status'] == 'success') {

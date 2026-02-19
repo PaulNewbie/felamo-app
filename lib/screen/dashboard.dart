@@ -552,7 +552,7 @@ class _DashboardState extends State<Dashboard> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tapusin muna ang unang markahan upang ma-unlock ang mga susunod na aralin.',
+            'Tapusin muna ang unang markahaUn upang ma-unlock ang mga susunod na aralin.',
             style: GoogleFonts.leagueSpartan(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 16),

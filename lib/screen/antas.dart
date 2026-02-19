@@ -53,12 +53,24 @@ class _AntasPageState extends State<AntasPage> {
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
           setState(() {
             lessons = List<Map<String, dynamic>>.from(jsonData['data']);
+            
+            // 1. Add this loop to auto-select the Aralin clicked from the Dashboard!
+            if (lessons.isNotEmpty) {
+              for (int i = 0; i < lessons.length; i++) {
+                if (lessons[i]['id'].toString() == widget.aralinId.toString()) {
+                  selectedLessonIndex = i;
+                  completedLessonIndex = i; // Optional: Moves the green checkmark here too
+                  break;
+                }
+              }
+            }
+
             // Ensure completedLessonIndex is valid
             if (completedLessonIndex != null && completedLessonIndex! >= lessons.length) {
               completedLessonIndex = lessons.isNotEmpty ? 0 : null;
             }
           });
-          print('Lessons fetched: ${lessons.length} lessons');
+          print('Lessons fetched: ${lessons.length} lessons. Selected index: $selectedLessonIndex');
         } else {
           print('Fetch lessons failed: ${jsonData['message'] ?? 'No message'}');
           if (mounted) {
@@ -148,11 +160,12 @@ class _AntasPageState extends State<AntasPage> {
                               aralinId: widget.aralinId,
                               sessionId: widget.sessionId,
                               antasId: widget.antasId,
-                              lessonId: lessons.isNotEmpty ? lessons[0]['id'] : 0,
+                              // Use the selectedLessonIndex instead of always 0
+                              lessonId: lessons.isNotEmpty ? lessons[selectedLessonIndex ?? 0]['id'] : 0, 
                             ),
                           ),
                         );
-                        print('Navigating to LessonScreen for first lesson');
+                        print('Navigating to LessonScreen for lesson index: ${selectedLessonIndex ?? 0}');
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),

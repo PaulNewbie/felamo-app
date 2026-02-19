@@ -106,7 +106,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
 
         if (data['status'] != 'success') {
           print('API Error in fetchQuestions: ${data['message'] ?? 'Unknown error'}');
-          _showError(null);
+          _showFetchError(data['message'] ?? 'May nangyaring mali sa pagkuha ng pagsusulit.');
           return;
         }
 
@@ -194,7 +194,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
 
         if (loadedQuestions.isEmpty) {
           print('No valid questions found in the response.');
-          _showError(null);
+          _showFetchError('Walang mga katanungan na magagamit para sa pagsusulit na ito.');
           return;
         }
 
@@ -209,12 +209,12 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
           print('Question ID: ${question['id']} (Type: ${question['type']})');
         }
       } else {
-        print('HTTP Error in fetchQuestions: Status code ${response.statusCode}, Response: ${response.body}');
-        _showError(null);
+        print('HTTP Error in fetchQuestions: Status code ${response.statusCode}');
+        _showFetchError('Server error: Hindi makuha ang pagsusulit.');
       }
     } catch (e) {
       print('Exception in fetchQuestions: $e');
-      _showError(null);
+      _showFetchError('May nangyaring mali sa koneksyon.');
     } finally {
       setState(() {
         isLoading = false;
@@ -282,6 +282,46 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         textController.text = userAnswers[currentIndex] ?? '';
       });
     }
+  }
+
+  void _showFetchError(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "Paalala",
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.orange[800], // Orange for notice/warning
+          ),
+        ),
+        content: Text(
+          message, // Shows the exact message from PHP (e.g., "You already taken this")
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            color: Colors.grey[800],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.of(context).pop(); // Go back to Antas screen
+            },
+            child: Text(
+              "Bumalik",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.red[700],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> submitAnswers() async {
