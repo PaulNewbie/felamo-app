@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Felamo',
       theme: ThemeData(),
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false, // Add this line to remove the debug banner
