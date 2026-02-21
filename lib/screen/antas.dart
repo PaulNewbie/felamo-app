@@ -106,8 +106,8 @@ class _AntasPageState extends State<AntasPage> {
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Color(0xFFD4A574),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.25),
             shape: BoxShape.circle,
           ),
           child: IconButton(
@@ -170,7 +170,7 @@ class _AntasPageState extends State<AntasPage> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6C3CE7),
+                          color: const Color(0xFF1976D2), 
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -228,7 +228,7 @@ class _AntasPageState extends State<AntasPage> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4ECDC4),
+                          color: const Color(0xFFF57C00),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -285,7 +285,7 @@ class _AntasPageState extends State<AntasPage> {
 
             const SizedBox(height: 16),
 
-            // Progress Items
+// Progress Items
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -302,39 +302,64 @@ class _AntasPageState extends State<AntasPage> {
               ),
               child: Column(
                 children: List.generate(
-                  lessons.isNotEmpty ? lessons.length : 1, // Show at least one item if lessons are empty
-                  (index) => Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          if (lessons.isNotEmpty && index < lessons.length) {
-                            setState(() {
-                              selectedLessonIndex = index;
-                              // Set the current lesson as completed, deselecting any previous one
-                              completedLessonIndex = index;
-                              print('Aralin ${index + 1} selected and marked as completed');
-                            });
-                          }
-                        },
+                  lessons.isNotEmpty ? lessons.length : 1,
+                  (index) {
+                    bool isSelected = selectedLessonIndex == index;
+                    bool isCompleted = completedLessonIndex == index;
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (lessons.isNotEmpty && index < lessons.length) {
+                          setState(() {
+                            selectedLessonIndex = index;
+                            completedLessonIndex = index;
+                            print('Aralin ${index + 1} selected');
+                          });
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: EdgeInsets.only(
+                            bottom: index < (lessons.isNotEmpty ? lessons.length - 1 : 0) ? 12 : 0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          // Magiging light red ang background kapag selected
+                          color: isSelected ? const Color(0xFFD32F2F).withOpacity(0.08) : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            // Magkakaroon ng red border kapag selected
+                            color: isSelected ? const Color(0xFFD32F2F) : Colors.grey.shade300,
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
                         child: Row(
                           children: [
-                            // Display check icon for the completed lesson only
-                            Icon(
-                              completedLessonIndex == index
-                                  ? Icons.check_circle
-                                  : Icons.circle_outlined,
-                              color: completedLessonIndex == index ? Colors.green : Colors.grey,
-                              size: 20,
+                            // Circular Badge para sa Icon
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isCompleted
+                                    ? Colors.green.withOpacity(0.15)
+                                    : Colors.grey.shade200,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isCompleted ? Icons.check_rounded : Icons.play_arrow_rounded,
+                                color: isCompleted ? Colors.green[700] : Colors.grey[600],
+                                size: 20,
+                              ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 16),
+                            // Text ng Aralin
                             Expanded(
                               child: Text(
                                 lessons.isNotEmpty && index < lessons.length
                                     ? lessons[index]['title'] ?? 'Walang Pamagat'
                                     : 'Aralin ${index + 1}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? const Color(0xFFD32F2F) : Colors.black87,
                                 ),
                                 overflow: TextOverflow.visible,
                                 softWrap: true,
@@ -343,11 +368,8 @@ class _AntasPageState extends State<AntasPage> {
                           ],
                         ),
                       ),
-                      if (index < (lessons.isNotEmpty ? lessons.length - 1 : 0)) ...[
-                        const SizedBox(height: 16),
-                      ],
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -369,11 +391,11 @@ class _AntasPageState extends State<AntasPage> {
             // Display selected lesson or first lesson by default
             lessons.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : Container(
+                  : Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: (selectedLessonIndex ?? 0) % 2 == 0 ? const Color(0xFF4CAF50) : const Color(0xFF6C3CE7),
+                      color: const Color(0xFFD32F2F), 
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: GestureDetector(

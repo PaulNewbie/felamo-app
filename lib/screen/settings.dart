@@ -358,9 +358,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(builder: (context) => const Login()),
+                        (Route<dynamic> route) => false, // Clears everything from the previous session
                       );
                     },
                     child: Text(

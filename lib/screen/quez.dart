@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:felamo/screen/dashboard.dart';
 
 class QuizScreen extends StatefulWidget {
   final int antasId;
@@ -268,9 +270,33 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         actionsAlignment: MainAxisAlignment.center, // Center the button
         actions: [
           ElevatedButton(
-            onPressed: () {
-              // This closes the dialog and pops all screens until it hits the Dashboard!
-              Navigator.of(context).popUntil((route) => route.isFirst); 
+            onPressed: () async {
+              // 1. Fetch the current logged-in user's details from SharedPreferences
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              String firstName = prefs.getString('firstName') ?? '';
+              String sessionId = prefs.getString('sessionId') ?? '';
+              int pointsReceived = prefs.getInt('pointsReceived') ?? 0;
+              int currentStreak = prefs.getInt('currentStreak') ?? 0;
+              int id = prefs.getInt('id') ?? 0;
+              String email = prefs.getString('email') ?? '';
+
+              if (context.mounted) {
+                // 2. Push the Dashboard with CURRENT user data and REMOVE ALL previous routes
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Dashboard(
+                      firstName: firstName,
+                      sessionid: sessionId,
+                      pointsReceived: pointsReceived,
+                      currentStreak: currentStreak,
+                      id: id,
+                      email: email,
+                    ),
+                  ),
+                  (Route<dynamic> route) => false, // This safely destroys the first account's dashboard!
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red[700],
@@ -930,18 +956,19 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
                       Text(
                         instruction,
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: Colors.grey[800],
+                          fontWeight: FontWeight.normal, 
+                          fontStyle: FontStyle.italic, 
+                          fontSize: 14, 
+                          color: Colors.grey[600], 
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         question['question'] ?? 'No question text',
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                          color: Colors.grey[800],
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 18, 
+                          color: Colors.grey[900], 
                         ),
                       ),
                       const SizedBox(height: 24),
