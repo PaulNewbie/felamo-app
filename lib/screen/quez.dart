@@ -269,8 +269,8 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-              Navigator.of(context).pop(); // Go back to the Aralin screen
+              // This closes the dialog and pops all screens until it hits the Dashboard!
+              Navigator.of(context).popUntil((route) => route.isFirst); 
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red[700],
@@ -280,7 +280,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
               ),
             ),
             child: Text(
-              "Bumalik sa mga Aralin",
+              "Bumalik sa Dashboard",
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
@@ -616,46 +616,65 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
   void _showError(int? rawPoints) {
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevents them from closing it by tapping outside
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           "Hindi Mo Nakamit",
+          textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
-            fontSize: 20,
+            fontSize: 22,
             color: Colors.red[800],
           ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Add an icon for visual feedback
+            Icon(Icons.menu_book_rounded, size: 80, color: Colors.orange[700]),
+            const SizedBox(height: 16),
             Text(
-              "Hindi mo nakamit ang puntos na kailangan",
+              "Hindi mo nakamit ang puntos na kailangan upang makapasa. \n\nKailangan mong manood at tapusin ulit ang mga aralin bago makakuha muli ng pagsusulit.",
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: 15,
                 color: Colors.grey[800],
               ),
             ),
             if (rawPoints != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Text(
                 "Ang iyong puntos ay $rawPoints",
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.grey[800],
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red[700],
                 ),
               ),
             ],
           ],
         ),
+        actionsAlignment: MainAxisAlignment.center, // Centers the button
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.of(context).pop(); // Go back to the Aralin screen!
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: Text(
-              "OK",
+              "Bumalik sa mga Aralin",
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
-                color: Colors.red[700],
+                fontSize: 16,
+                color: Colors.white,
               ),
             ),
           ),

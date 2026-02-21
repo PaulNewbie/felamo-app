@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../baseurl/baseurl.dart';
+import 'package:felamo/screen/quez.dart';
 
 class LessonScreen extends StatefulWidget {
   final int id;
@@ -353,11 +354,49 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
             setState(() => allVideosCompleted = true);
             print('All videos completed: $allVideosCompleted');
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('All videos completed! Ready for the quiz?', style: GoogleFonts.poppins(fontSize: 14)),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: Text(
+                    'Tapos na ang mga Aralin!',
+                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[700]),
+                  ),
+                  content: Text(
+                    'Napanood mo na ang lahat ng bidyo. Handa ka na bang kumuha ng pagsusulit?',
+                    style: GoogleFonts.poppins(fontSize: 16),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                      },
+                      child: Text('Mamaya', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // Close dialog
+                        _controller?.pause(); // Pause video just in case
+                        
+                        // Proceed to Quiz!
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => QuizScreen(
+                              antasId: widget.antasId,
+                              sessionId: widget.sessionId,
+                              aralinId: widget.aralinId,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[700],
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Kumuha ng Pagsusulit', style: GoogleFonts.poppins(fontSize: 14, color: Colors.white)),
+                    ),
+                  ],
                 ),
               );
             }
@@ -711,6 +750,46 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
                           ],
                         ),
                       ),
+
+                      // NEW QUIZ BUTTON - Only shows if videos are done!
+                      if (allVideosCompleted)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _controller?.pause();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuizScreen(
+                                    antasId: widget.antasId,
+                                    sessionId: widget.sessionId,
+                                    aralinId: widget.aralinId,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Text(
+                              'Pumunta sa Pagsusulit',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
                     ],
                   ),
                 ),
