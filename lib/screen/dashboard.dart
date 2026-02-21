@@ -112,10 +112,17 @@ class _DashboardState extends State<Dashboard> {
         final jsonData = jsonDecode(response.body);
         if (jsonData['status'] == 'success' && jsonData['data'] != null) {
           setState(() {
-            _lrn = jsonData['data']['lrn'] as String?;
-            _points = jsonData['data']['points'] as int?;
-            _profilePicture = jsonData['data']['profile_picture'] as String?;
-            _avatarFileName = jsonData['data']['avatar_file_name'] as String? ?? 'default_avatar.webp';
+            _lrn = jsonData['data']['lrn']?.toString();
+            
+            // Safely parse the points whether PHP sends it as a String ("150") or an Int (150)
+            if (jsonData['data']['points'] != null) {
+              _points = int.tryParse(jsonData['data']['points'].toString()) ?? 0;
+            } else {
+              _points = 0;
+            }
+            
+            _profilePicture = jsonData['data']['profile_picture']?.toString();
+            _avatarFileName = jsonData['data']['avatar_file_name']?.toString() ?? 'default_avatar.webp';
           });
           print('Profile fetched: LRN=$_lrn, Points=$_points, ProfilePicture=$_profilePicture, Avatar=$_avatarFileName');
         } else {
@@ -688,7 +695,13 @@ class _DashboardState extends State<Dashboard> {
                                 aralinId: aralin.id,
                               ),
                             ),
-                          );
+                          ).then((_) {
+                            // NEW CODE: This runs automatically when the user comes BACK to the Dashboard.
+                            // It will instantly update their Kabuuang Puntos, Progress, and unlock new levels!
+                            fetchProfile();
+                            fetchProgressPercentage();
+                            fetchAntas();
+                          });
                         } else {
                           print('Level ${antas.level} is locked');
                           ScaffoldMessenger.of(context).showSnackBar(
