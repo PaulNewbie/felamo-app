@@ -106,7 +106,13 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
 
         if (data['status'] != 'success') {
           print('API Error in fetchQuestions: ${data['message'] ?? 'Unknown error'}');
-          _showFetchError(data['message'] ?? 'May nangyaring mali sa pagkuha ng pagsusulit.');
+
+          String message = (data['message'] ?? '').toString().toLowerCase();
+          if (message.contains('already taken') || message.contains('taken')) {
+            _showAlreadyTakenDialog();
+          } else {
+            _showFetchError(data['message'] ?? 'May nangyaring mali sa pagkuha ng pagsusulit.');
+          }
           return;
         }
 
@@ -220,6 +226,69 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         isLoading = false;
       });
     }
+  }
+
+  void _showAlreadyTakenDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "Tapos Mo Na!",
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            color: Colors.green[700], // Green to show success/completion
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Reusing your happy asset
+            Image.asset(
+              'assets/maligaya.png',
+              height: 120,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.check_circle, size: 100, color: Colors.green),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Nasagutan mo na ang pagsusulit na ito dati. Magaling!\n\nIpagpatuloy lang ang pag-aaral.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center, // Center the button
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+              Navigator.of(context).pop(); // Go back to the Aralin screen
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              "Bumalik sa mga Aralin",
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void nextQuestion() {

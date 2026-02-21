@@ -52,14 +52,43 @@ class _DashboardState extends State<Dashboard> {
     fetchAntas();
     fetchProgressPercentage();
     fetchProfile();
-    Future.delayed(Duration.zero, () {
-      _showCustomStreakModal();
-    });
+
+    _checkAndShowStreakModal();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _checkAndShowStreakModal() async {
+    // 1. Prevent showing if the user received 0 points
+    if (widget.pointsReceived <= 0) {
+      return; 
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    // Create a unique key for the user so it works correctly if different accounts log in
+    String key = 'last_streak_modal_date_${widget.id}';
+    String lastDateStr = prefs.getString(key) ?? '';
+    
+    DateTime now = DateTime.now();
+    // Format the current date as YYYY-MM-DD
+    String todayStr = '${now.year}-${now.month}-${now.day}';
+
+    // 2. Check if the modal has already been shown today
+    if (lastDateStr != todayStr) {
+      // Show the modal
+      Future.delayed(Duration.zero, () {
+        if (mounted) {
+          _showCustomStreakModal();
+        }
+      });
+      
+      // Update the stored date in SharedPreferences
+      await prefs.setString(key, todayStr);
+    }
   }
 
   Future<void> fetchProfile() async {
@@ -86,7 +115,7 @@ class _DashboardState extends State<Dashboard> {
             _lrn = jsonData['data']['lrn'] as String?;
             _points = jsonData['data']['points'] as int?;
             _profilePicture = jsonData['data']['profile_picture'] as String?;
-            _avatarFileName = jsonData['data']['avatar_file_name'] as String? ?? 'default_avatar.png';
+            _avatarFileName = jsonData['data']['avatar_file_name'] as String? ?? 'default_avatar.webp';
           });
           print('Profile fetched: LRN=$_lrn, Points=$_points, ProfilePicture=$_profilePicture, Avatar=$_avatarFileName');
         } else {
@@ -409,9 +438,11 @@ class _DashboardState extends State<Dashboard> {
       padding: const EdgeInsets.all(16.0),
       child: Row(
         children: [
+          // Stack keeps the Frame directly on top of the Profile Picture
           Stack(
             alignment: Alignment.center,
             children: [
+              // 1. Profile Picture (Inner Circle) - Size 80x80
               Container(
                 width: 80,
                 height: 80,
@@ -433,47 +464,60 @@ class _DashboardState extends State<Dashboard> {
                   ),
                 ),
               ),
-              Positioned(
-                top: -20,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(45),
-                    image: DecorationImage(
-                      image: _avatarFileName != null && _avatarFileName!.isNotEmpty
-                          ? Image.network(
-                              'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/assets/$_avatarFileName',
-                              errorBuilder: (context, error, stackTrace) {
-                                print('Error loading avatar: $error');
-                                return Image.asset('assets/default_avatar.png');
-                              },
-                            ).image
-                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
-                      fit: BoxFit.cover,
-                    ),
+              
+              // 2. Avatar/Frame (Outer Layer) - Size 110x110
+              // This renders directly over the profile picture
+              Container(
+                width: 110, // Slightly larger than 80 to act as a border/frame
+                height: 110,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(55),
+                  image: DecorationImage(
+                    image: _avatarFileName != null && _avatarFileName!.isNotEmpty
+                        ? Image.network(
+                            'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/assets/$_avatarFileName',
+                            errorBuilder: (context, error, stackTrace) {
+                              print('Error loading avatar frame: $error');
+                              return Image.asset('assets/default_avatar.png');
+                            },
+                          ).image
+                        : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                    // Note: Depending on your frame's transparent padding, you might 
+                    // need to change this to BoxFit.contain instead of BoxFit.cover
+                    fit: BoxFit.cover, 
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kumusta, ${widget.firstName}!',
-                style: GoogleFonts.leagueSpartan(fontSize: 25, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              Text(
-                'LRN: ${_lrn ?? 'Loading...'}',
-                style: GoogleFonts.leagueSpartan(fontSize: 16, color: Colors.white70),
-              ),
-              Text(
-                'Kabuuang Puntos: ${_points ?? 'Loading...'}',
-                style: GoogleFonts.leagueSpartan(fontSize: 16, color: Colors.white70),
-              ),
-            ],
+          
+          const SizedBox(width: 16),
+
+          // 3. User Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kumusta, ${widget.firstName}!',
+                  style: GoogleFonts.leagueSpartan(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'LRN: ${_lrn ?? 'Loading...'}',
+                  style: GoogleFonts.leagueSpartan(fontSize: 14, color: Colors.white70),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Kabuuang Puntos: ${_points ?? 'Loading...'}',
+                  style: GoogleFonts.leagueSpartan(fontSize: 14, color: Colors.white70),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),

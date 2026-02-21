@@ -224,6 +224,7 @@ class _TalaNgRanggoScreenState extends State<TalaNgRanggoScreen> {
     return SizedBox(
       width: 85,
       child: Column(
+        mainAxisSize: MainAxisSize.min, // <--- ADD THIS LINE HERE
         children: [
           Container(
             width: 85,

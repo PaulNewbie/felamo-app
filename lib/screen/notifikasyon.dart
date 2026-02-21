@@ -88,6 +88,14 @@ class _NotifikasyonState extends State<Notifikasyon> {
               padding: EdgeInsets.all(16),
               child: Row(
                 children: [
+                  // --- ADDED BACK BUTTON HERE ---
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  // ------------------------------
                   Container(
                     width: 40,
                     height: 40,
@@ -141,7 +149,17 @@ class _NotifikasyonState extends State<Notifikasyon> {
                             itemCount: _notifications.length,
                             itemBuilder: (context, index) {
                               final notif = _notifications[index];
-                              final createdAt = DateTime.parse(notif["created_at"]);
+                              
+                              // --- TIMEZONE FIX ---
+                              String timeString = notif["created_at"];
+                              // If the server string doesn't have a timezone marker, append 'Z' to treat it as UTC
+                              if (!timeString.endsWith("Z")) {
+                                timeString += "Z";
+                              }
+                              // Parse as UTC and convert to the user's local device time (UTC+8)
+                              final createdAt = DateTime.parse(timeString).toLocal();
+                              // --------------------
+                              
                               final timeAgo = timeago.format(createdAt, locale: 'en_short');
 
                               return Padding(
