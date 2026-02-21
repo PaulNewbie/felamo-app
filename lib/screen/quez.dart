@@ -34,7 +34,9 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
   int? assessmentId;
   bool isLoading = true;
   Timer? _timer;
-  Duration _timeRemaining = const Duration(minutes: 15);
+  Duration _timeRemaining = const Duration(seconds: 40);
+  bool showCorrection = false;
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -68,10 +70,10 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
   }
 
   void _startTimer() {
+    _timer?.cancel(); // Cancel any existing timers
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeRemaining.inSeconds <= 0) {
-        timer.cancel();
-        submitAnswers();
+        nextQuestion(isTimeout: true); // Auto-progress on timeout
       } else {
         setState(() {
           _timeRemaining = _timeRemaining - const Duration(seconds: 1);
@@ -291,67 +293,73 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
     );
   }
 
-  void nextQuestion() {
+  Future<void> nextQuestion({bool isTimeout = false}) async {
     if (questions.isEmpty) return;
 
+    _timer?.cancel(); // 1. Stop the timer from ticking down
+
     final question = questions[currentIndex];
-    final answer = question['type'] == 'multiple' || question['type'] == 'boolean'
+    String? answer = question['type'] == 'multiple' || question['type'] == 'boolean'
         ? selectedAnswer
         : textController.text.trim();
 
-    if (answer == null || answer.isEmpty) return;
+    if (isTimeout) {
+      answer = ""; 
+    } else if (answer == null || answer.isEmpty) {
+      _startTimer(); // Restart timer if they clicked next without answering
+      return; 
+    }
 
+    // 2. Show the correction colors
+    setState(() {
+      showCorrection = true; 
+    });
+
+    // 3. Wait for 2 seconds so the user can see the correct answer
+    await Future.delayed(const Duration(seconds: 2));
+
+    // 4. Save the answer and move on
     userAnswers[currentIndex] = answer;
 
     if (question['type'] == 'multiple') {
       multipleChoiceAnswers.removeWhere((ans) => ans["question_id"] == question['id']);
-      multipleChoiceAnswers.add({
-        "question_id": question['id'],
-        "answer": answer,
-      });
+      multipleChoiceAnswers.add({"question_id": question['id'], "answer": answer});
     } else if (question['type'] == 'boolean') {
       trueOrFalseAnswers.removeWhere((ans) => ans["question_id"] == question['id']);
-      trueOrFalseAnswers.add({
-        "question_id": question['id'],
-        "answer": answer == 'A' ? 1 : 0,
-      });
+      trueOrFalseAnswers.add({"question_id": question['id'], "answer": answer == 'A' ? 1 : 0});
     } else if (question['type'] == 'identification') {
       identificationAnswers.removeWhere((ans) => ans["question_id"] == question['id']);
-      identificationAnswers.add({
-        "question_id": question['id'],
-        "answer": answer,
-      });
+      identificationAnswers.add({"question_id": question['id'], "answer": answer});
     } else if (question['type'] == 'jumbled') {
       jumbledWordsAnswers.removeWhere((ans) => ans["question_id"] == question['id']);
-      jumbledWordsAnswers.add({
-        "question_id": question['id'],
-        "answer": answer,
-      });
+      jumbledWordsAnswers.add({"question_id": question['id'], "answer": answer});
     }
 
     if (currentIndex < questions.length - 1) {
       setState(() {
         currentIndex++;
-        selectedAnswer = userAnswers[currentIndex];
-        textController.text = userAnswers[currentIndex] ?? '';
+        selectedAnswer = null; 
+        textController.text = ''; 
+        showCorrection = false; // Hide correction colors for the new question
+        _timeRemaining = const Duration(seconds: 40); // Reset timer to 40s
       });
+      _startTimer(); // Start the timer again!
     } else {
-      _timer?.cancel();
       submitAnswers();
     }
   }
 
-  void previousQuestion() {
-    if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-        selectedAnswer = questions[currentIndex]['type'] == 'multiple' || questions[currentIndex]['type'] == 'boolean'
-            ? userAnswers[currentIndex]
-            : null;
-        textController.text = userAnswers[currentIndex] ?? '';
-      });
-    }
-  }
+  // void previousQuestion() {
+  //   if (currentIndex > 0) {
+  //     setState(() {
+  //       currentIndex--;
+  //       selectedAnswer = questions[currentIndex]['type'] == 'multiple' || questions[currentIndex]['type'] == 'boolean'
+  //           ? userAnswers[currentIndex]
+  //           : null;
+  //       textController.text = userAnswers[currentIndex] ?? '';
+  //     });
+  //   }
+  // }
 
   void _showFetchError(String message) {
     showDialog(
@@ -944,14 +952,23 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
                                   const SizedBox(height: 12),
                                   TextField(
                                     controller: textController,
+                                    enabled: !showCorrection, // Disable typing while showing answer
                                     decoration: InputDecoration(
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                        borderSide: BorderSide(
+                                          color: showCorrection 
+                                              ? (textController.text.trim().toLowerCase() == question['correct_answer'].toString().toLowerCase() ? Colors.green[700]! : Colors.red[700]!) 
+                                              : Colors.grey[300]!
+                                        ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                        borderSide: BorderSide(
+                                          color: showCorrection 
+                                              ? (textController.text.trim().toLowerCase() == question['correct_answer'].toString().toLowerCase() ? Colors.green[700]! : Colors.red[700]!) 
+                                              : Colors.grey[300]!
+                                        ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
@@ -960,11 +977,10 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
                                       hintText: question['type'] == 'identification'
                                           ? 'Ilagay ang sagot'
                                           : 'Ilagay ang naayos na salita',
-                                      hintStyle: GoogleFonts.poppins(
-                                        color: Colors.grey[500],
-                                      ),
                                       filled: true,
-                                      fillColor: Colors.grey[100],
+                                      fillColor: showCorrection 
+                                          ? (textController.text.trim().toLowerCase() == question['correct_answer'].toString().toLowerCase() ? Colors.green[50] : Colors.red[50]) 
+                                          : Colors.grey[100],
                                     ),
                                     style: GoogleFonts.poppins(
                                       fontSize: 16,
@@ -976,43 +992,57 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
                                       });
                                     },
                                   ),
+                                  if (showCorrection && textController.text.trim().toLowerCase() != question['correct_answer'].toString().toLowerCase())
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12.0),
+                                      child: Text(
+                                        "Tamang Sagot: ${question['correct_answer']}",
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.green[700],
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                       ),
                       const SizedBox(height: 24),
                       Row(
                         children: [
+                          // Expanded(
+                          //   child: ElevatedButton(
+                          //     onPressed: currentIndex > 0 ? previousQuestion : null,
+                          //     style: ElevatedButton.styleFrom(
+                          //       backgroundColor: Colors.grey[300],
+                          //       foregroundColor: Colors.grey[800],
+                          //       padding: const EdgeInsets.symmetric(vertical: 16),
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(12),
+                          //       ),
+                          //       elevation: 2,
+                          //     ),
+                          //     child: Text(
+                          //       "Bumalik",
+                          //       style: GoogleFonts.poppins(
+                          //         fontWeight: FontWeight.w600,
+                          //         fontSize: 16,
+                          //       ),
+                          //     ),
+                          //   ),
+                          // ),
+                          // const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: currentIndex > 0 ? previousQuestion : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[300],
-                                foregroundColor: Colors.grey[800],
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: Text(
-                                "Bumalik",
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: (question['type'] == 'multiple' || question['type'] == 'boolean')
-                                  ? selectedAnswer != null
-                                      ? nextQuestion
-                                      : null
-                                  : textController.text.trim().isNotEmpty
-                                      ? nextQuestion
-                                      : null,
+                                onPressed: showCorrection // Check if currently showing answer
+                                  ? null // Disable button during the 2-second pause
+                                  : (question['type'] == 'multiple' || question['type'] == 'boolean')
+                                      ? selectedAnswer != null
+                                          ? nextQuestion
+                                          : null
+                                      : textController.text.trim().isNotEmpty
+                                          ? nextQuestion
+                                          : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red[700],
                                 foregroundColor: Colors.white,
@@ -1047,9 +1077,35 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
 
   Widget _buildAnswerOption(String letter, String text) {
     final isSelected = selectedAnswer == letter;
+    final correctAnswer = questions[currentIndex]['correct_answer'];
+    final isCorrect = letter == correctAnswer;
+
+    // Default colors
+Color? bgColor = isSelected ? Colors.blue[50] : Colors.white;
+    Color borderColor = isSelected ? Colors.blue[700]! : Colors.grey[300]!;
+    Color gradientStart = isSelected ? Colors.blue[500]! : Colors.grey[400]!;
+    Color gradientEnd = isSelected ? Colors.blue[700]! : Colors.grey[600]!;
+    Color textColor = isSelected ? Colors.blue[800]! : Colors.grey[800]!;
+
+    // Apply Green/Red if we are showing the correction (After clicking Susunod)
+    if (showCorrection) {
+      if (isCorrect) {
+        bgColor = Colors.green[50];
+        borderColor = Colors.green[700]!;
+        gradientStart = Colors.green[500]!;
+        gradientEnd = Colors.green[700]!;
+        textColor = Colors.green[800]!;
+      } else if (isSelected) {
+        bgColor = Colors.red[50];
+        borderColor = Colors.red[700]!;
+        gradientStart = Colors.red[500]!;
+        gradientEnd = Colors.red[700]!;
+        textColor = Colors.red[800]!;
+      }
+    }
 
     return GestureDetector(
-      onTap: () {
+      onTap: showCorrection ? null : () { // Prevent tapping while checking answer
         setState(() {
           selectedAnswer = letter;
         });
@@ -1058,18 +1114,11 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.red[50] : Colors.white,
-          border: Border.all(
-            color: isSelected ? Colors.red[700]! : Colors.grey[300]!,
-            width: 1.5,
-          ),
+          color: bgColor,
+          border: Border.all(color: borderColor, width: 1.5),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
           ],
         ),
         child: Row(
@@ -1079,9 +1128,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
               height: 36,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isSelected
-                      ? [Colors.red[500]!, Colors.red[700]!]
-                      : [Colors.grey[400]!, Colors.grey[600]!],
+                  colors: [gradientStart, gradientEnd],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -1090,11 +1137,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
               child: Center(
                 child: Text(
                   letter,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),
@@ -1104,8 +1147,8 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
                 text,
                 style: GoogleFonts.poppins(
                   fontSize: 16,
-                  color: isSelected ? Colors.red[800] : Colors.grey[800],
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: textColor,
+                  fontWeight: isSelected || (showCorrection && isCorrect) ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),
