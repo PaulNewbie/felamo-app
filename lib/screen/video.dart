@@ -271,9 +271,14 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
         print('Points awarded for video $index: $points');
 
         if (data['status'] == 'success') {
-          if (data['message'] == 'Ito') {
+          // Kunin ang message at gawing lowercase para madaling i-check
+          String serverMsg = (data['message'] ?? '').toString().toLowerCase();
+          
+          // Kung ang message ng server ay may "ito", "napanood", o "already"
+          if (serverMsg.contains('ito') || serverMsg.contains('napanood') || serverMsg.contains('already') || serverMsg.contains('tapos')) {
             titleMessage = '⚠️ Paalala';
-            serverMessage = 'Napanood mo na ang bidyong ito.';
+            // Pinalinaw natin ang text para alam ng student na pwede na siya mag-quiz
+            serverMessage = 'Napanood mo na ang bidyong ito. Maaari ka nang kumuha ulit ng pagsusulit.'; 
           } else {
             titleMessage = '🎉 Nakakuha ka ng Halo-halo!';
             serverMessage = 'Nakatanggap ka ng Halo-halo!\n+$points Puntos';

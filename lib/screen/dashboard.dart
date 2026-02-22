@@ -451,8 +451,8 @@ class _DashboardState extends State<Dashboard> {
             children: [
               // 1. Profile Picture (Inner Circle) - Size 80x80
               Container(
-                width: 80,
-                height: 80,
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(40),
