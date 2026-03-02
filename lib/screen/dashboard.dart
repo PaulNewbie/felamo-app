@@ -63,9 +63,9 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> _checkAndShowStreakModal() async {
     // 1. Prevent showing if the user received 0 points
-    if (widget.pointsReceived <= 0) {
-      return; 
-    }
+    // if (widget.pointsReceived <= 0) {
+    //   return; 
+    // }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     
@@ -451,8 +451,8 @@ class _DashboardState extends State<Dashboard> {
             children: [
               // 1. Profile Picture (Inner Circle) - Size 80x80
               Container(
-                width: 60,
-                height: 60,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(40),
@@ -476,7 +476,7 @@ class _DashboardState extends State<Dashboard> {
               // This renders directly over the profile picture
               Container(
                 width: 110, // Slightly larger than 80 to act as a border/frame
-                height: 110,
+                height: 90,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(55),
                   image: DecorationImage(

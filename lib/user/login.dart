@@ -219,7 +219,7 @@ class _LoginState extends State<Login> {
         await prefs.setString('firstName', data['user']?['first_name'] ?? '');
         await prefs.setInt('pointsReceived', int.tryParse(data['points_received']?.toString() ?? '0') ?? 0);
         await prefs.setInt('currentStreak', int.tryParse(data['current_streak']?.toString() ?? '0') ?? 0);
-        await prefs.setInt('id', int.tryParse(data['id']?.toString() ?? '0') ?? 0);
+        await prefs.setInt('id', int.tryParse(data['user']?['id']?.toString() ?? '0') ?? 0);
         await prefs.setInt('points', int.tryParse(data['user']?['points']?.toString() ?? '0') ?? 0);
         await prefs.setString('profilePicture', data['user']?['profile_picture'] ?? '');
         await prefs.setString('email', data['user']?['email'] ?? '');
@@ -268,7 +268,7 @@ class _LoginState extends State<Login> {
           await prefs.setString('firstName', data['user']?['first_name'] ?? '');
           await prefs.setInt('pointsReceived', int.tryParse(data['points_received']?.toString() ?? '0') ?? 0);
           await prefs.setInt('currentStreak', int.tryParse(data['current_streak']?.toString() ?? '0') ?? 0);
-          await prefs.setInt('id', int.tryParse(data['id']?.toString() ?? '0') ?? 0);
+          await prefs.setInt('id', int.tryParse(data['user']?['id']?.toString() ?? '0') ?? 0);
           await prefs.setInt('points', int.tryParse(data['user']?['points']?.toString() ?? '0') ?? 0);
           await prefs.setString('profilePicture', data['user']?['profile_picture'] ?? '');
           await prefs.setString('email', data['user']?['email'] ?? '');
