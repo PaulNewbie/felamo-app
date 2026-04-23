@@ -26,8 +26,8 @@ class _FirstquizState extends State<Firstquiz> {
       Uri.parse('${baseUrl}/get-aralin.php'),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "session_id": "ef25989f01946d0723b1abf43cf305ba8537952adcb93911431640bf0df87fef",
-        "level_id": "1"
+        "session_id": widget.sessionId,
+        "aralin_id": widget.aralinId,
       }),
     );
 
@@ -35,7 +35,7 @@ class _FirstquizState extends State<Firstquiz> {
       final data = jsonDecode(response.body);
       if (data['status'] == 'success' && data['data'].isNotEmpty) {
         final filename = data['data'][0]['attachment_filename'];
-        final videoUrl = '${baseUrl}/storage/videos/$filename';
+        final videoUrl = '${storageUrl}videos/$filename';
 
         _controller = VideoPlayerController.network(videoUrl)
           ..initialize().then((_) {

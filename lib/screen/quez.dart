@@ -101,7 +101,7 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "session_id": widget.sessionId,
-          "level_id": widget.antasId,
+          "aralin_id": widget.aralinId,
         }),
       );
 
