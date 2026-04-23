@@ -237,10 +237,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
   }
 
   Future<void> _showCompletionDialog(int index) async {
-    if (index >= lessons.length || index < 0) {
-      print('Invalid index for completion dialog: $index');
-      return;
-    }
+    if (index >= lessons.length || index < 0) return;
 
     setState(() {
       videoCompletionStatus[index] = true;
@@ -255,201 +252,66 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'session_id': widget.sessionId,
-          'aralin_id': lessons[index]['id'],
+          'aralin_id':  lessons[index]['id'],
         }),
       );
 
-      print('API Response: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        String serverMessage = '';
-        String titleMessage = '';
-        Widget? rewardImage;
-        int points = lessons.length > 1 ? 50 : 100;
-        print('Points awarded for video $index: $points');
+        final bool firstWatch     = data['first_watch']     ?? false;
+        final int  pointsReceived = data['points_received'] ?? 0;
 
-        if (data['status'] == 'success') {
-          // Kunin ang message at gawing lowercase para madaling i-check
-          String serverMsg = (data['message'] ?? '').toString().toLowerCase();
-          
-          // Kung ang message ng server ay may "ito", "napanood", o "already"
-          if (serverMsg.contains('ito') || serverMsg.contains('napanood') || serverMsg.contains('already') || serverMsg.contains('tapos')) {
-            titleMessage = '⚠️ Paalala';
-            // Pinalinaw natin ang text para alam ng student na pwede na siya mag-quiz
-            serverMessage = 'Napanood mo na ang bidyong ito. Maaari ka nang kumuha ulit ng pagsusulit.'; 
-          } else {
-            titleMessage = '🎉 Nakakuha ka ng Halo-halo!';
-            serverMessage = 'Nakatanggap ka ng Halo-halo!\n+$points Puntos';
-            rewardImage = Image.asset('assets/halohalo.png', height: 100);
-          }
+        String titleMessage;
+        Widget? rewardImage;
+
+        if (data['status'] == 'success' && firstWatch) {
+          // First time — show halo-halo reward
+          titleMessage = '🎉 Nakakuha ka ng Halo-halo!';
+          rewardImage  = Image.asset('assets/halohalo.png', height: 100);
         } else {
-          serverMessage = 'Error: ${data['message'] ?? 'No message'}';
+          // Re-watch — quiz is unlocked again, no bonus
+          titleMessage = 'Tapos na ang Re-watch!';
         }
 
         if (mounted) {
           await showDialog(
             context: context,
-            builder: (context) => AlertDialog(
+            builder: (_) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text(titleMessage, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
+              title: Text(titleMessage,
+                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (rewardImage != null) ...[
-                    rewardImage,
-                    const SizedBox(height: 10),
-                  ],
+                  if (rewardImage != null) ...[rewardImage, const SizedBox(height: 10)],
                   Text(
-                    serverMessage,
+                    firstWatch
+                        ? 'Nakatanggap ka ng $pointsReceived puntos!\nNaka-unlock na ang pagsusulit.'
+                        : 'Naka-unlock na muli ang pagsusulit. Subukang muli!',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.poppins(fontSize: 15),
                   ),
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    print('Completion dialog closed');
-                  },
-                  child: Text('OK', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK', style: GoogleFonts.poppins(color: Colors.blue)),
                 ),
               ],
             ),
           );
 
-          if (index + 1 < lessons.length && !videoCompletionStatus.every((status) => status)) {
-            if (mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: Text(
-                    'Video Completed!',
-                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  content: Text(
-                    'Continue to next video?',
-                    style: GoogleFonts.poppins(fontSize: 16),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _controller?.pause();
-                        print('User chose not to continue, video paused');
-                      },
-                      child: Text('No', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        initializeVideo(index + 1);
-                        print('User chose to continue to video ${index + 1}');
-                      },
-                      child: Text('Yes', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
-                    ),
-                  ],
-                ),
-              );
-            }
-          } else {
-            setState(() => allVideosCompleted = true);
-            print('All videos completed: $allVideosCompleted');
-            if (mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: Text(
-                    'Tapos na ang mga Aralin!',
-                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green[700]),
-                  ),
-                  content: Text(
-                    'Napanood mo na ang lahat ng bidyo. Handa ka na bang kumuha ng pagsusulit?',
-                    style: GoogleFonts.poppins(fontSize: 16),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                      },
-                      child: Text('Mamaya', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        _controller?.pause(); // Pause video just in case
-                        
-                        // Proceed to Quiz!
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => QuizScreen(
-                              antasId: widget.antasId,
-                              sessionId: widget.sessionId,
-                              aralinId: widget.aralinId,
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[700],
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text('Kumuha ng Pagsusulit', style: GoogleFonts.poppins(fontSize: 14, color: Colors.white)),
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
-        }
-      } else {
-        print('API request failed with status: ${response.statusCode}');
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text('Error', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
-              content: Text('Failed to update completion status: HTTP ${response.statusCode}',
-                  style: GoogleFonts.poppins(fontSize: 16)),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    print('Error dialog closed');
-                  },
-                  child: Text('OK', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
-                ),
-              ],
-            ),
-          );
+          // // Offer to go to the next video or the quiz
+          // if (index + 1 < lessons.length) {
+          //   _offerNextVideo(index);
+          // } else {
+          //   setState(() => allVideosCompleted = true);
+          // }
         }
       }
     } catch (e) {
       print('Error in _showCompletionDialog: $e');
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('Error', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
-            content: Text('An error occurred: $e', style: GoogleFonts.poppins(fontSize: 16)),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  print('Error dialog closed');
-                },
-                child: Text('OK', style: GoogleFonts.poppins(fontSize: 14, color: Colors.blue)),
-              ),
-            ],
-          ),
-        );
-      }
     }
   }
 

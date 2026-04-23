@@ -427,292 +427,182 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
     );
   }
 
-  Future<void> submitAnswers() async {
-    try {
-      final url = Uri.parse("${baseUrl}submit-assessment.php");
-      final requestBody = {
-        "session_id": widget.sessionId,
-        "assessment_id": assessmentId ?? 2,
-        "multiple_choices": multipleChoiceAnswers,
-        "true_or_false": trueOrFalseAnswers,
-        "identification": identificationAnswers,
-        "jumbled_words": jumbledWordsAnswers,
-      };
+Future<void> submitAnswers() async {
+  try {
+    final url  = Uri.parse("${baseUrl}submit-assessment.php");
+    final body = {
+      "session_id":    widget.sessionId,
+      "assessment_id": assessmentId ?? 0,
+      "multiple_choices":  multipleChoiceAnswers,
+      "true_or_false":     trueOrFalseAnswers,
+      "identification":    identificationAnswers,
+      "jumbled_words":     jumbledWordsAnswers,
+    };
 
-      print('Submitting answers to: $url');
-      print('Request body: ${jsonEncode(requestBody)}');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
 
-      print('Submit Response:');
-      print('Status Code: ${response.statusCode}');
-      print('Body: ${response.body}');
+      if (data['status'] == 'success') {
+        // ✅ PASSED
+        final int rawPoints   = data['raw_points']   ?? 0;
+        final int totalItems  = data['total_items']  ?? 1;
+        final int bonusPoints = data['bonus_points'] ?? 0;
+        final bool firstPass  = data['first_pass']   ?? true;
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data["status"] == "success") {
-          int rawPoints = data['raw_points'] ?? 0;
-          int bonusPoints = data['bonus_points'] ?? 35;
+        _showPassDialog(rawPoints, totalItems, bonusPoints, firstPass);
 
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text(
-                "Mahusay!",
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                  color: Colors.red[800],
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/maligaya.png',
-                    height: 150,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, size: 150, color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Natapos mo na ang mga Pagsulit\nAng iyong puntos ay $rawPoints.",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showRewardModal(rawPoints, bonusPoints);
-                  },
-                  child: Text(
-                    "OK",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.red[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        } else if (data["status"] == "failed") {
-          // Trigger the red failure dialog
-          print('Failed quiz. Score: ${data["raw_points"]}');
-          _showError(data['raw_points']);
-        } else {
-          print('API Error in submitAnswers: ${data["message"]}');
-          _showError(null);
-        }
+      } else if (data['status'] == 'failed') {
+        // ❌ FAILED
+        final int rawPoints  = data['raw_points']  ?? 0;
+        final int totalItems = data['total_items'] ?? 1;
+        final int pct        = data['percentage']  ?? 0;
+        final int attempts   = data['attempts']    ?? 1;
+
+        _showFailDialog(rawPoints, totalItems, pct, attempts);
+
       } else {
-        print('HTTP Error in submitAnswers: Status code ${response.statusCode}, Response: ${response.body}');
-        _showError(null);
+        // already_taken or other status
+        _showAlreadyTakenDialog();
       }
-    } catch (e) {
-      print('Exception in submitAnswers: $e');
-      _showError(null);
+    } else {
+      _showFetchError('Server error: HTTP ${response.statusCode}');
     }
+  } catch (e) {
+    _showFetchError('Network error: $e');
   }
+}
 
-  void _showRewardModal(int rawPoints, int bonusPoints) {
-    String rewardImage = '';
-    String rewardName = '';
+// ── Pass dialog ───────────────────────────────────────────────────────────────
+void _showPassDialog(int rawPoints, int totalItems, int bonusPoints, bool firstPass) {
+  String rewardImage = _rewardImageForLevel(rawPoints);
 
-    switch (widget.antasId) {
-      case 1:
-        if (rawPoints >= 0 && rawPoints <= 10) {
-          rewardImage = 'assets/taho.png';
-          rewardName = 'Taho';
-        } else if (rawPoints >= 11 && rawPoints <= 15) {
-          rewardImage = 'assets/isaw.png';
-          rewardName = 'Isaw';
-        } else if (rawPoints >= 16 && rawPoints <= 19) {
-          rewardImage = 'assets/lemur.png';
-          rewardName = 'Lemur';
-        } else if (rawPoints == 20) {
-          rewardImage = 'assets/halo_halo.png';
-          rewardName = 'Halo-Halo';
-        }
-        break;
-      case 2:
-        if (rawPoints >= 0 && rawPoints <= 9) {
-          rewardImage = 'assets/isaw.png';
-          rewardName = 'Isaw';
-        } else if (rawPoints >= 10 && rawPoints <= 19) {
-          rewardImage = 'assets/lemur.png';
-          rewardName = 'Lemur';
-        } else if (rawPoints == 20) {
-          rewardImage = 'assets/halo_halo.png';
-          rewardName = 'Halo-Halo';
-        }
-        break;
-      case 3:
-        if (rawPoints >= 0 && rawPoints <= 12) {
-          rewardImage = 'assets/isaw.png';
-          rewardName = 'Isaw';
-        } else if (rawPoints >= 13 && rawPoints <= 24) {
-          rewardImage = 'assets/kwek_kwek.png';
-          rewardName = 'Kwek-Kwek';
-        } else if (rawPoints == 25) {
-          rewardImage = 'assets/halo_halo.png';
-          rewardName = 'Halo-Halo';
-        }
-        break;
-      case 4:
-        if (rawPoints >= 0 && rawPoints <= 14) {
-          rewardImage = 'assets/isaw.png';
-          rewardName = 'Isaw';
-        } else if (rawPoints >= 15 && rawPoints <= 29) {
-          rewardImage = 'assets/kwek_kwek.png';
-          rewardName = 'Kwek-Kwek';
-        } else if (rawPoints == 30) {
-          rewardImage = 'assets/halo_halo.png';
-          rewardName = 'Halo-Halo';
-        }
-        break;
-      default:
-        rewardImage = 'assets/taho.png';
-        rewardName = 'Taho';
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (rewardImage.isNotEmpty)
-              Image.asset(
-                rewardImage,
-                height: 150,
-                errorBuilder: (context, error, stackTrace) {
-                  print('Image load error for $rewardImage: $error');
-                  return const Icon(Icons.error, size: 150, color: Colors.red);
-                },
-              ),
-            const SizedBox(height: 16),
-            Text(
-              "Nakatanggap ka ng $rewardName!",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.red[800],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Bonus Points: $bonusPoints",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: Colors.grey[800],
-              ),
-            ),
-          ],
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Mahusay!',
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold, fontSize: 22, color: Colors.green[700],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text(
-              "OK",
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(rewardImage, height: 120,
+              errorBuilder: (_, __, ___) =>
+                  Icon(Icons.emoji_events, size: 100, color: Colors.amber)),
+          const SizedBox(height: 12),
+          Text(
+            'Pumasa ka! $rawPoints / $totalItems',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 16),
+          ),
+          if (firstPass && bonusPoints > 0)
+            Text(
+              '+$bonusPoints bonus puntos',
               style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: Colors.red[700],
+                fontSize: 14, color: Colors.green[700], fontWeight: FontWeight.w600,
               ),
             ),
+          if (!firstPass)
+            Text(
+              'Na-record na ang iyong naunang pagpasa.',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+        ],
+      ),
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pop(); // back to Antas
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+          child: Text('Bumalik sa Aralin',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Fail dialog ───────────────────────────────────────────────────────────────
+void _showFailDialog(int rawPoints, int totalItems, int pct, int attempts) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Hindi Pumasa',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.poppins(
+          fontWeight: FontWeight.bold, fontSize: 22, color: Colors.red[800],
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.menu_book_rounded, size: 80, color: Colors.orange[700]),
+          const SizedBox(height: 12),
+          Text(
+            'Ang iyong puntos: $rawPoints / $totalItems ($pct%)',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Kailangan ang 80% para pumasa.\n'
+            'Panoorin muli ang bidyo bago subukang muli.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700]),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Pagtatangka #$attempts',
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
           ),
         ],
       ),
-    );
-  }
-
-  void _showError(int? rawPoints) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Prevents them from closing it by tapping outside
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          "Hindi Mo Nakamit",
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Colors.red[800],
+      actionsAlignment: MainAxisAlignment.center,
+      actions: [
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop(); // close dialog
+            Navigator.of(context).pop(); // back to Antas screen
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[700],
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
+          child: Text('Panoorin Muli ang Bidyo',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Add an icon for visual feedback
-            Icon(Icons.menu_book_rounded, size: 80, color: Colors.orange[700]),
-            const SizedBox(height: 16),
-            Text(
-              "Hindi mo nakamit ang puntos na kailangan upang makapasa. \n\nKailangan mong manood at tapusin ulit ang mga aralin bago makakuha muli ng pagsusulit.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 15,
-                color: Colors.grey[800],
-              ),
-            ),
-            if (rawPoints != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                "Ang iyong puntos ay $rawPoints",
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[700],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center, // Centers the button
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-              Navigator.of(context).pop(); // Go back to the Aralin screen!
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              "Bumalik sa mga Aralin",
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
+// ── Reward image helper ───────────────────────────────────────────────────────
+String _rewardImageForLevel(int rawPoints) {
+  // All levels use taho for passing since the 80% rule is the gate
+  return 'assets/taho.png';
+}
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
