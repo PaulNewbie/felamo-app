@@ -507,9 +507,13 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
               ],
             ),
           );
-        } else {
-          print('API Error in submitAnswers: ${data["message"] ?? 'Unknown error'}');
+        } else if (data["status"] == "failed") {
+          // Trigger the red failure dialog
+          print('Failed quiz. Score: ${data["raw_points"]}');
           _showError(data['raw_points']);
+        } else {
+          print('API Error in submitAnswers: ${data["message"]}');
+          _showError(null);
         }
       } else {
         print('HTTP Error in submitAnswers: Status code ${response.statusCode}, Response: ${response.body}');
