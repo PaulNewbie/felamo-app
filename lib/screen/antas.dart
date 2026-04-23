@@ -29,22 +29,27 @@ class _AntasPageState extends State<AntasPage> {
   int? selectedLessonIndex;
   int? completedLessonIndex = 0;
 
-  // --- NEW: tracks whether the quiz for this aralin has been passed ---
-  bool _quizCompleted = false;
+  // FIX 1: Declare the missing field. null = still checking, false = not done, true = done.
+  bool? _quizCompleted;
+
+  // FIX 2: Declare the missing _quizCheckDone field that was referenced but never declared.
   bool _quizCheckDone = false;
 
   @override
   void initState() {
     super.initState();
-    print(
-        'AntasPage loaded with id: ${widget.id}, aralinId: ${widget.aralinId}, '
-        'sessionId: ${widget.sessionId}, antasId: ${widget.antasId}');
     fetchLessons();
     _checkQuizCompletion();
   }
 
-  // ── Quiz completion check ────────────────────────────────────────────────
+  // ── Check whether this aralin's quiz has been passed ──────────────────────
   Future<void> _checkQuizCompletion() async {
+    // Guard: don't bother checking if we don't have a valid aralin ID
+    if (widget.aralinId <= 0) {
+      if (mounted) setState(() => _quizCheckDone = true);
+      return;
+    }
+
     final url = Uri.parse('${baseUrl}get-quiz-history.php');
     try {
       final response = await http.post(
@@ -52,99 +57,41 @@ class _AntasPageState extends State<AntasPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'session_id': widget.sessionId,
-          'aralin_id': widget.aralinId,
+          'aralin_id': widget.aralinId, // int, not string
         }),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
           setState(() {
+            // 'success' means they have a completed pass record in assessment_takes
             _quizCompleted = data['status'] == 'success';
             _quizCheckDone = true;
           });
         }
       } else {
-        if (mounted) setState(() => _quizCheckDone = true);
+        if (mounted) {
+          setState(() {
+            _quizCompleted = false;
+            _quizCheckDone = true;
+          });
+        }
       }
     } catch (e) {
       print('Quiz completion check error: $e');
-      if (mounted) setState(() => _quizCheckDone = true);
-    }
-  }
-
-  // ── Fetch lessons ────────────────────────────────────────────────────────
-  Future<void> fetchLessons() async {
-    final url = Uri.parse('${baseUrl}get-aralin.php');
-    print(
-        'Fetching lessons for antasId: ${widget.antasId}, sessionId: ${widget.sessionId}');
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'session_id': widget.sessionId,
-          'level_id': widget.antasId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['status'] == 'success' && jsonData['data'] != null) {
-          setState(() {
-            lessons = List<Map<String, dynamic>>.from(jsonData['data']);
-
-            // Auto-select the aralin that was clicked from the Dashboard
-            if (lessons.isNotEmpty) {
-              for (int i = 0; i < lessons.length; i++) {
-                if (lessons[i]['id'].toString() ==
-                    widget.aralinId.toString()) {
-                  selectedLessonIndex = i;
-                  completedLessonIndex = i;
-                  break;
-                }
-              }
-            }
-
-            if (completedLessonIndex != null &&
-                completedLessonIndex! >= lessons.length) {
-              completedLessonIndex = lessons.isNotEmpty ? 0 : null;
-            }
-          });
-          print(
-              'Lessons fetched: ${lessons.length} lessons. Selected index: $selectedLessonIndex');
-        } else {
-          print('Fetch lessons failed: ${jsonData['message'] ?? 'No message'}');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(
-                      'Failed to fetch lessons: ${jsonData['message'] ?? 'Unknown error'}')),
-            );
-          }
-        }
-      } else {
-        print('Fetch lessons failed with status: ${response.statusCode}');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('Server error: HTTP ${response.statusCode}')),
-          );
-        }
-      }
-    } catch (e) {
-      print('Fetch lessons error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Network error: $e')),
-        );
+        setState(() {
+          _quizCompleted = false;
+          _quizCheckDone = true;
+        });
       }
     }
   }
 
-  // ── Navigate to quiz OR history depending on completion state ────────────
+  // ── Navigate to quiz or history ───────────────────────────────────────────
   void _onQuizCardTapped() {
-    if (_quizCompleted) {
+    // FIX 3: _quizCompleted is bool? — use == true to safely unwrap the nullable.
+    if (_quizCompleted == true) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -165,13 +112,76 @@ class _AntasPageState extends State<AntasPage> {
           ),
         ),
       ).then((_) {
-        // Re-check after returning in case they just passed
+        // Re-check after returning — student may have just passed
         _checkQuizCompletion();
       });
     }
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  // ── Fetch lessons for this level ──────────────────────────────────────────
+  Future<void> fetchLessons() async {
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}get-aralin.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'session_id': widget.sessionId,
+          'level_id': widget.antasId,
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['status'] == 'success' && jsonData['data'] != null) {
+          final loaded = List<Map<String, dynamic>>.from(jsonData['data']);
+          int targetIndex = 0;
+          for (int i = 0; i < loaded.length; i++) {
+            if (loaded[i]['id'].toString() == widget.aralinId.toString()) {
+              targetIndex = i;
+              break;
+            }
+          }
+          setState(() {
+            lessons = loaded;
+            selectedLessonIndex = targetIndex;
+            completedLessonIndex = targetIndex;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Network error: $e')),
+        );
+      }
+    }
+  }
+
+  // ── Quiz card appearance helpers (use _quizCompleted == true safely) ──────
+  Color get _quizCardColor {
+    if (_quizCompleted == null) return Colors.grey.shade400;
+    return _quizCompleted! ? const Color(0xFF388E3C) : const Color(0xFFF57C00);
+  }
+
+  IconData get _quizCardIcon {
+    if (_quizCompleted == null) return Icons.hourglass_empty;
+    return _quizCompleted! ? Icons.history_edu : Icons.quiz;
+  }
+
+  String get _quizCardTitle {
+    if (_quizCompleted == null) return 'Naghihintay...';
+    return _quizCompleted! ? 'Kasaysayan' : 'Pagsusulit';
+  }
+
+  String get _quizCardSubtitle {
+    if (_quizCompleted == null) return 'Sinusuri...';
+    return _quizCompleted!
+        ? 'Tingnan ang iyong\nmga sagot'
+        : 'Magpatakbo ng mga\npagsusulit at exam';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,10 +197,7 @@ class _AntasPageState extends State<AntasPage> {
           ),
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-              print('Back button pressed, navigating back');
-            },
+            onPressed: () => Navigator.pop(context),
           ),
         ),
         title: const Text(
@@ -224,7 +231,7 @@ class _AntasPageState extends State<AntasPage> {
               ),
               child: Row(
                 children: [
-                  // Video / Module card
+                  // ── Video / Module card ───────────────────────────────
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
@@ -241,9 +248,7 @@ class _AntasPageState extends State<AntasPage> {
                                   : 0,
                             ),
                           ),
-                        );
-                        print(
-                            'Navigating to LessonScreen for lesson index: ${selectedLessonIndex ?? 0}');
+                        ).then((_) => _checkQuizCompletion());
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -276,10 +281,7 @@ class _AntasPageState extends State<AntasPage> {
                             ),
                             const Text(
                               'Manood ng\nBidyong Aralin',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(color: Colors.white, fontSize: 12),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -290,19 +292,16 @@ class _AntasPageState extends State<AntasPage> {
 
                   const SizedBox(width: 12),
 
-                  // Quiz / History card — dynamic based on _quizCompleted
+                  // ── Quiz / History card — driven by _quizCompleted ────
                   Expanded(
                     child: GestureDetector(
+                      // FIX 4: Only allow tap once the check has finished (_quizCheckDone).
                       onTap: _quizCheckDone ? _onQuizCardTapped : null,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: !_quizCheckDone
-                              ? Colors.grey.shade400
-                              : _quizCompleted
-                                  ? const Color(0xFF388E3C)
-                                  : const Color(0xFFF57C00),
+                          color: _quizCardColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -314,22 +313,14 @@ class _AntasPageState extends State<AntasPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
-                                !_quizCheckDone
-                                    ? Icons.hourglass_empty
-                                    : _quizCompleted
-                                        ? Icons.history_edu
-                                        : Icons.quiz,
+                                _quizCardIcon,
                                 color: Colors.white,
                                 size: 32,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              !_quizCheckDone
-                                  ? 'Naghihintay...'
-                                  : _quizCompleted
-                                      ? 'Kasaysayan'
-                                      : 'Pagsusulit',
+                              _quizCardTitle,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -337,11 +328,7 @@ class _AntasPageState extends State<AntasPage> {
                               ),
                             ),
                             Text(
-                              !_quizCheckDone
-                                  ? 'Sinusuri...'
-                                  : _quizCompleted
-                                      ? 'Tingnan ang iyong\nmga sagot'
-                                      : 'Magpatakbo ng mga\npagsusulit at exam',
+                              _quizCardSubtitle,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -358,12 +345,11 @@ class _AntasPageState extends State<AntasPage> {
             ),
 
             // ── Completion badge (shown when quiz is done) ───────────────
-            if (_quizCompleted) ...[
+            if (_quizCompleted == true) ...[
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(12),
@@ -399,7 +385,6 @@ class _AntasPageState extends State<AntasPage> {
                 color: Colors.black87,
               ),
             ),
-
             const SizedBox(height: 16),
 
             Container(
@@ -420,8 +405,8 @@ class _AntasPageState extends State<AntasPage> {
                 children: List.generate(
                   lessons.isNotEmpty ? lessons.length : 1,
                   (index) {
-                    bool isSelected = selectedLessonIndex == index;
-                    bool isCompleted = completedLessonIndex == index;
+                    final isSelected = selectedLessonIndex == index;
+                    final isCompleted = completedLessonIndex == index;
 
                     return GestureDetector(
                       onTap: () {
@@ -429,19 +414,17 @@ class _AntasPageState extends State<AntasPage> {
                           setState(() {
                             selectedLessonIndex = index;
                             completedLessonIndex = index;
-                            print('Aralin ${index + 1} selected');
                           });
                         }
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         margin: EdgeInsets.only(
-                            bottom: index <
-                                    (lessons.isNotEmpty
-                                        ? lessons.length - 1
-                                        : 0)
-                                ? 12
-                                : 0),
+                          bottom: index <
+                                  (lessons.isNotEmpty ? lessons.length - 1 : 0)
+                              ? 12
+                              : 0,
+                        ),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
@@ -480,8 +463,7 @@ class _AntasPageState extends State<AntasPage> {
                             Expanded(
                               child: Text(
                                 lessons.isNotEmpty && index < lessons.length
-                                    ? lessons[index]['title'] ??
-                                        'Walang Pamagat'
+                                    ? lessons[index]['title'] ?? 'Walang Pamagat'
                                     : 'Aralin ${index + 1}',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -507,7 +489,7 @@ class _AntasPageState extends State<AntasPage> {
 
             const SizedBox(height: 24),
 
-            // ── Lesson summary section ───────────────────────────────────
+            // ── Lesson summary ───────────────────────────────────────────
             const Text(
               'Paksa at Buod ng Aralin',
               style: TextStyle(
@@ -516,7 +498,6 @@ class _AntasPageState extends State<AntasPage> {
                 color: Colors.black87,
               ),
             ),
-
             const SizedBox(height: 16),
 
             lessons.isEmpty
@@ -535,7 +516,7 @@ class _AntasPageState extends State<AntasPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => LessonScreen(
+                              builder: (_) => LessonScreen(
                                 id: widget.id,
                                 aralinId: widget.aralinId,
                                 sessionId: widget.sessionId,
@@ -543,10 +524,7 @@ class _AntasPageState extends State<AntasPage> {
                                 lessonId: lessons[lessonIndex]['id'] ?? 0,
                               ),
                             ),
-                          );
-                          print(
-                              'Navigating to LessonScreen for lesson index: $lessonIndex, '
-                              'lessonId: ${lessons[lessonIndex]['id']}');
+                          ).then((_) => _checkQuizCompletion());
                         }
                       },
                       child: Column(
@@ -577,9 +555,7 @@ class _AntasPageState extends State<AntasPage> {
                                     (detail) => Text(
                                       '• $detail',
                                       style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                      ),
+                                          color: Colors.white, fontSize: 14),
                                     ),
                                   )
                                   ?.toList() ??

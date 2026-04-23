@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:felamo/screen/dashboard.dart';
+import 'package:felamo/screen/quiz_history.dart';
 
 class QuizScreen extends StatefulWidget {
   final int antasId;
@@ -111,9 +112,21 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         if (data['status'] != 'success') {
           print('API Error in fetchQuestions: ${data['message'] ?? 'Unknown error'}');
 
-          String message = (data['message'] ?? '').toString().toLowerCase();
-          if (message.contains('already taken') || message.contains('taken')) {
-            _showAlreadyTakenDialog();
+            String message = (data['message'] ?? '').toString().toLowerCase();
+            // Added 'nasagutan' to the check
+            if (message.contains('already taken') || message.contains('taken') || message.contains('nasagutan')) {
+            // Direktang ilipat ang user sa Quiz History Screen
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizHistoryScreen(
+                    sessionId: widget.sessionId,
+                    aralinId: widget.aralinId,
+                  ),
+                ),
+              );
+            }
           } else {
             _showFetchError(data['message'] ?? 'May nangyaring mali sa pagkuha ng pagsusulit.');
           }
@@ -208,10 +221,49 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
           return;
         }
 
+        // --- NEW LOGIC: Limit to 15, At least 2 per type, and Randomize ---
+
+        // 1. Separate the questions by type and shuffle each list
+        List<Map<String, dynamic>> mc = loadedQuestions.where((q) => q['type'] == 'multiple').toList()..shuffle();
+        List<Map<String, dynamic>> tf = loadedQuestions.where((q) => q['type'] == 'boolean').toList()..shuffle();
+        List<Map<String, dynamic>> id = loadedQuestions.where((q) => q['type'] == 'identification').toList()..shuffle();
+        List<Map<String, dynamic>> jw = loadedQuestions.where((q) => q['type'] == 'jumbled').toList()..shuffle();
+
+        List<Map<String, dynamic>> finalQuestions = [];
+
+        // 2. Take up to 2 items from each available type
+        finalQuestions.addAll(mc.take(2));
+        finalQuestions.addAll(tf.take(2));
+        finalQuestions.addAll(id.take(2));
+        finalQuestions.addAll(jw.take(2));
+
+        // 3. Put all the leftover questions into one big pool
+        List<Map<String, dynamic>> remainingPool = [];
+        if (mc.length > 2) remainingPool.addAll(mc.skip(2));
+        if (tf.length > 2) remainingPool.addAll(tf.skip(2));
+        if (id.length > 2) remainingPool.addAll(id.skip(2));
+        if (jw.length > 2) remainingPool.addAll(jw.skip(2));
+
+        remainingPool.shuffle();
+
+        // 4. Fill the final list until we hit exactly 15 items
+        int needed = 15 - finalQuestions.length;
+        if (needed > 0) {
+          finalQuestions.addAll(remainingPool.take(needed));
+        }
+
+        // 5. Final Shuffle! This mixes all the types together so they aren't grouped
+        finalQuestions.shuffle();
+
+        // --- END OF NEW LOGIC ---
+
         setState(() {
-          questions = loadedQuestions;
+          questions = finalQuestions;
           isLoading = false;
         });
+
+        print('assessmentId: $assessmentId');
+        print('Total final questions loaded: ${questions.length}');
 
         print('assessmentId: $assessmentId');
         print('Question IDs:');
@@ -270,43 +322,26 @@ class _QuizScreenState extends State<QuizScreen> with SingleTickerProviderStateM
         actionsAlignment: MainAxisAlignment.center, // Center the button
         actions: [
           ElevatedButton(
-            onPressed: () async {
-              // 1. Fetch the current logged-in user's details from SharedPreferences
-              SharedPreferences prefs = await SharedPreferences.getInstance();
-              String firstName = prefs.getString('firstName') ?? '';
-              String sessionId = prefs.getString('sessionId') ?? '';
-              int pointsReceived = prefs.getInt('pointsReceived') ?? 0;
-              int currentStreak = prefs.getInt('currentStreak') ?? 0;
-              int id = prefs.getInt('id') ?? 0;
-              String email = prefs.getString('email') ?? '';
-
-              if (context.mounted) {
-                // 2. Push the Dashboard with CURRENT user data and REMOVE ALL previous routes
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Dashboard(
-                      firstName: firstName,
-                      sessionid: sessionId,
-                      pointsReceived: pointsReceived,
-                      currentStreak: currentStreak,
-                      id: id,
-                      email: email,
-                    ),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuizHistoryScreen(
+                    sessionId: widget.sessionId,
+                    aralinId: widget.aralinId,
                   ),
-                  (Route<dynamic> route) => false, // This safely destroys the first account's dashboard!
-                );
-              }
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
+              backgroundColor: const Color(0xFF388E3C), // Kulay green para tumugma sa UI ng History
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(
-              "Bumalik sa Dashboard",
+              "Tingnan ang Kasaysayan",
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 fontSize: 16,
