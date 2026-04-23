@@ -190,7 +190,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
     }
 
     String videoUrl =
-        'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/videos/${lesson['attachment_filename']}';
+        '${storageUrl}videos/${lesson['attachment_filename']}';
     print('Initializing video: $videoUrl');
     currentPlayingIndex = index;
 
@@ -247,8 +247,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
       isVideoCompleted = true;
     });
 
-    final doneUrl = Uri.parse(
-        'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/insert-done-aralin.php');
+    final doneUrl = Uri.parse('${baseUrl}insert-done-aralin.php');
 
     try {
       final response = await http.post(

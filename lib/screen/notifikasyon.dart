@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:felamo/baseurl/baseurl.dart';
 
 class Notifikasyon extends StatefulWidget {
   final String sessionid;
@@ -33,8 +34,7 @@ class _NotifikasyonState extends State<Notifikasyon> {
   }
 
   Future<void> fetchNotifications() async {
-    final url = Uri.parse("https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/get-student-notification.php");
-
+    final url = Uri.parse('${baseUrl}get-student-notification.php');
     try {
       print("Sending session_id: ${widget.sessionid}"); // 🔍 print session id
 

@@ -460,7 +460,7 @@ class _DashboardState extends State<Dashboard> {
                   image: DecorationImage(
                     image: _profilePicture != null && _profilePicture!.isNotEmpty
                         ? Image.network(
-                            'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/profile-pictures/${path.basename(_profilePicture!)}',
+                            '${storageUrl}profile-pictures/${path.basename(_profilePicture!)}',
                             errorBuilder: (context, error, stackTrace) {
                               print('Error loading profile picture: $error');
                               return Image.asset('assets/profile.png');
@@ -482,7 +482,7 @@ class _DashboardState extends State<Dashboard> {
                   image: DecorationImage(
                     image: _avatarFileName != null && _avatarFileName!.isNotEmpty
                         ? Image.network(
-                            'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/assets/$_avatarFileName',
+                            '${storageUrl}/assets/$_avatarFileName',
                             errorBuilder: (context, error, stackTrace) {
                               print('Error loading avatar frame: $error');
                               return Image.asset('assets/default_avatar.png');

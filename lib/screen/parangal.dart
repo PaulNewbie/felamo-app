@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:felamo/baseurl/baseurl.dart';
 
 class MyWidget extends StatefulWidget {
   final String sessionId;
@@ -29,7 +30,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _fetchAvatars() async {
-    const url = 'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/get-avatars.php';
+    const url = '${baseUrl}get-avatars.php'; 
     final body = jsonEncode({"session_id": widget.sessionId});
 
     try {
@@ -82,7 +83,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _fetchAntas() async {
-    const url = 'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/get-antas.php';
+    const url = '${baseUrl}get-antas.php';
     final body = jsonEncode({"session_id": widget.sessionId});
 
     try {
@@ -131,7 +132,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _fetchCertificates() async {
-    const url = 'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/get-certificates.php';
+    const url = '${baseUrl}get-certificates.php';
     final body = jsonEncode({"session_id": widget.sessionId});
 
     try {
@@ -181,7 +182,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _buyAvatar(int avatarId) async {
-    const url = 'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/avail-avatar.php';
+    const url = '${baseUrl}avail-avatar.php';
     final body = jsonEncode({
       "session_id": widget.sessionId,
       "avatar_id": avatarId
@@ -219,7 +220,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Future<void> _equipAvatar(int avatarId) async {
-    const url = 'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/update-avatar.php';
+    const url = '${baseUrl}update-avatar.php';
     final body = jsonEncode({
       "session_id": widget.sessionId,
       "avatar_id": avatarId
@@ -473,8 +474,8 @@ class _MyWidgetState extends State<MyWidget> {
       onTap: isActive && _certificates.isNotEmpty && certificateIndex < _certificates.length
           ? () {
               final imageUrl = certificateId != null
-                  ? 'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/certs/$certificateId'
-                  : 'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/certs/${_certificates[certificateIndex]}';
+                  ? '${storageUrl}certs/$certificateId'
+                  : '${storageUrl}certs/${_certificates[certificateIndex]}';
               print('Showing certificate: $imageUrl');
               _showCertificateModal(imageUrl);
             }
@@ -612,7 +613,7 @@ class _MyWidgetState extends State<MyWidget> {
       itemCount: _avatars.length,
       itemBuilder: (context, index) {
         final avatar = _avatars[index];
-        final imageUrl = 'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/assets/${avatar['filename']}';
+        final imageUrl = '${storageUrl}assets/${avatar['filename']}';
         return _buildAvatarItem(imageUrl, avatar['owned'] == true, avatar['price'], avatar['id']);
       },
     );

@@ -60,7 +60,7 @@ class _ProfileState extends State<Profile> {
             _emailController.text = profileData['email'] ?? '';
             _selectedGender = profileData['gender'] ?? 'Lalaki';
             _profileImageUrl = profileData['profile_picture'] != null
-                ? 'https://darkslategrey-jay-754607.hostingersite.com/backend/storage/profile-pictures/${path.basename(profileData['profile_picture'])}'
+                ? '${storageUrl}profile-pictures/${path.basename(profileData['profile_picture'])}'
                 : null;
           });
         } else {

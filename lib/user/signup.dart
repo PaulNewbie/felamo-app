@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:felamo/baseurl/baseurl.dart';
 
 class SignUp extends StatefulWidget {
   const SignUp({super.key});
@@ -83,8 +84,7 @@ class _SignUpState extends State<SignUp> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/register-sent-otp.php');
-
+      final url = Uri.parse('${baseUrl}register-sent-otp.php');
       print('SEND OTP → $url');
     
       final response = await http.post(
@@ -150,8 +150,7 @@ class _SignUpState extends State<SignUp> {
     setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/register-v2.php');
-
+      final url = Uri.parse('${baseUrl}register-v2.php');
       print('REGISTER → $url');
 
       final response = await http.post(

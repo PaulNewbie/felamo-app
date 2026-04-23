@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:felamo/baseurl/baseurl.dart';
 
 class TalaNgRanggoScreen extends StatefulWidget {
   final String sessionId;
@@ -22,7 +23,7 @@ class _TalaNgRanggoScreenState extends State<TalaNgRanggoScreen> {
   }
 
   Future<void> fetchLeaderBoard() async {
-    final url = Uri.parse("https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/get-overall-leader-boards.php");
+    final url = Uri.parse('${baseUrl}get-overall-leader-boards.php');
 
     try {
       final response = await http.post(

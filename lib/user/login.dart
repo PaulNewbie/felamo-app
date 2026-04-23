@@ -106,8 +106,7 @@ class _LoginState extends State<Login> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/forgot-password.php'),
+        Uri.parse('${baseUrl}forgot-password.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -198,8 +197,7 @@ class _LoginState extends State<Login> {
 
     try {
       final response = await http.post(
-        Uri.parse(
-            'https://darkslategrey-jay-754607.hostingersite.com/backend/api/app/login-using-otp.php'),
+        Uri.parse('${baseUrl}login-using-otp.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'otp': otp}),
       );
