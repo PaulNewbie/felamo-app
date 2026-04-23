@@ -771,15 +771,16 @@ class _QuizScreenState extends State<QuizScreen>
   Widget _buildAnswerArea(Map<String, dynamic> question) {
     if (question['type'] == 'multiple' || question['type'] == 'boolean') {
       return ListView(
-        children: (question['choices'] as Map<String, String>)
+        // FIX: Cast as Map<String, dynamic> to prevent JSON parsing crashes
+        children: (question['choices'] as Map<String, dynamic>)
             .entries
             .map((entry) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: _buildAnswerOption(entry.key, entry.value, question),
+                  // FIX: Add .toString() to the value
+                  child: _buildAnswerOption(entry.key, entry.value.toString(), question),
                 ))
             .toList(),
-      );
-    }
+      );}
 
     // Identification / Jumbled
     return Column(
@@ -875,8 +876,8 @@ class _QuizScreenState extends State<QuizScreen>
   Widget _buildAnswerOption(
       String letter, String text, Map<String, dynamic> question) {
     final isSelected  = selectedAnswer == letter;
-    final correctKey  = question['correct_answer']?.toString() ?? '';
-    final isCorrect   = letter == correctKey;
+    final correctKey = question['correct_answer']?.toString().toLowerCase().trim() ?? '';
+    final isCorrect = letter.toLowerCase() == correctKey || text.toLowerCase().trim() == correctKey;
 
     Color? bgColor      = isSelected ? Colors.blue[50] : Colors.white;
     Color  borderColor  = isSelected ? Colors.blue[700]! : Colors.grey[300]!;

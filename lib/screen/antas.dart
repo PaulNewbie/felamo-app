@@ -29,23 +29,27 @@ class _AntasPageState extends State<AntasPage> {
   int? selectedLessonIndex;
   int? completedLessonIndex = 0;
 
-  // FIX 1: Declare the missing field. null = still checking, false = not done, true = done.
   bool? _quizCompleted;
-
-  // FIX 2: Declare the missing _quizCheckDone field that was referenced but never declared.
   bool _quizCheckDone = false;
 
   @override
   void initState() {
     super.initState();
     fetchLessons();
-    _checkQuizCompletion();
+    // We don't call _checkQuizCompletion() here anymore; fetchLessons() will call it once data is loaded.
   }
 
-  // ── Check whether this aralin's quiz has been passed ──────────────────────
+  // ── FIX 1: Create a dynamic getter for the currently selected Aralin ID ──
+  int get _currentAralinId {
+    if (lessons.isEmpty) return widget.aralinId;
+    return int.tryParse(lessons[selectedLessonIndex ?? 0]['id'].toString()) ?? widget.aralinId;
+  }
+
+  // ── Check whether THIS currently selected aralin's quiz has been passed ──
   Future<void> _checkQuizCompletion() async {
-    // Guard: don't bother checking if we don't have a valid aralin ID
-    if (widget.aralinId <= 0) {
+    final targetAralinId = _currentAralinId; // Use the dynamic ID
+    
+    if (targetAralinId <= 0) {
       if (mounted) setState(() => _quizCheckDone = true);
       return;
     }
@@ -57,14 +61,13 @@ class _AntasPageState extends State<AntasPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'session_id': widget.sessionId,
-          'aralin_id': widget.aralinId, // int, not string
+          'aralin_id': targetAralinId, // FIX 2: Send the specific Aralin ID
         }),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {
           setState(() {
-            // 'success' means they have a completed pass record in assessment_takes
             _quizCompleted = data['status'] == 'success';
             _quizCheckDone = true;
           });
@@ -90,14 +93,13 @@ class _AntasPageState extends State<AntasPage> {
 
   // ── Navigate to quiz or history ───────────────────────────────────────────
   void _onQuizCardTapped() {
-    // FIX 3: _quizCompleted is bool? — use == true to safely unwrap the nullable.
     if (_quizCompleted == true) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => QuizHistoryScreen(
             sessionId: widget.sessionId,
-            aralinId: widget.aralinId,
+            aralinId: _currentAralinId, // FIX 3: Pass specific Aralin ID
           ),
         ),
       );
@@ -108,11 +110,10 @@ class _AntasPageState extends State<AntasPage> {
           builder: (context) => QuizScreen(
             antasId: widget.antasId,
             sessionId: widget.sessionId,
-            aralinId: widget.aralinId,
+            aralinId: _currentAralinId, // FIX 4: Pass specific Aralin ID
           ),
         ),
       ).then((_) {
-        // Re-check after returning — student may have just passed
         _checkQuizCompletion();
       });
     }
@@ -148,6 +149,9 @@ class _AntasPageState extends State<AntasPage> {
             selectedLessonIndex = targetIndex;
             completedLessonIndex = targetIndex;
           });
+          
+          // FIX 5: Check quiz status AFTER the lessons are mapped
+          _checkQuizCompletion();
         }
       }
     } catch (e) {
@@ -159,7 +163,6 @@ class _AntasPageState extends State<AntasPage> {
     }
   }
 
-  // ── Quiz card appearance helpers (use _quizCompleted == true safely) ──────
   Color get _quizCardColor {
     if (_quizCompleted == null) return Colors.grey.shade400;
     return _quizCompleted! ? const Color(0xFF388E3C) : const Color(0xFFF57C00);
@@ -214,7 +217,6 @@ class _AntasPageState extends State<AntasPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Top action cards ─────────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -231,7 +233,6 @@ class _AntasPageState extends State<AntasPage> {
               ),
               child: Row(
                 children: [
-                  // ── Video / Module card ───────────────────────────────
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
@@ -240,12 +241,10 @@ class _AntasPageState extends State<AntasPage> {
                           MaterialPageRoute(
                             builder: (context) => LessonScreen(
                               id: widget.id,
-                              aralinId: widget.aralinId,
+                              aralinId: _currentAralinId, // FIX 6: Use dynamic ID
                               sessionId: widget.sessionId,
                               antasId: widget.antasId,
-                              lessonId: lessons.isNotEmpty
-                                  ? lessons[selectedLessonIndex ?? 0]['id']
-                                  : 0,
+                              lessonId: _currentAralinId, // FIX 7: Use dynamic ID
                             ),
                           ),
                         ).then((_) => _checkQuizCompletion());
@@ -292,10 +291,8 @@ class _AntasPageState extends State<AntasPage> {
 
                   const SizedBox(width: 12),
 
-                  // ── Quiz / History card — driven by _quizCompleted ────
                   Expanded(
                     child: GestureDetector(
-                      // FIX 4: Only allow tap once the check has finished (_quizCheckDone).
                       onTap: _quizCheckDone ? _onQuizCardTapped : null,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
@@ -344,7 +341,6 @@ class _AntasPageState extends State<AntasPage> {
               ),
             ),
 
-            // ── Completion badge (shown when quiz is done) ───────────────
             if (_quizCompleted == true) ...[
               const SizedBox(height: 12),
               Container(
@@ -376,7 +372,6 @@ class _AntasPageState extends State<AntasPage> {
 
             const SizedBox(height: 24),
 
-            // ── Progress section ─────────────────────────────────────────
             const Text(
               'Daloy ng Pag-aaral',
               style: TextStyle(
@@ -414,7 +409,12 @@ class _AntasPageState extends State<AntasPage> {
                           setState(() {
                             selectedLessonIndex = index;
                             completedLessonIndex = index;
+                            _quizCheckDone = false; // Set to loading state
+                            _quizCompleted = null;  // Clear current status
                           });
+                          
+                          // FIX 8: Check completion again for the NEW selected aralin
+                          _checkQuizCompletion();
                         }
                       },
                       child: AnimatedContainer(
@@ -489,7 +489,6 @@ class _AntasPageState extends State<AntasPage> {
 
             const SizedBox(height: 24),
 
-            // ── Lesson summary ───────────────────────────────────────────
             const Text(
               'Paksa at Buod ng Aralin',
               style: TextStyle(
@@ -518,10 +517,10 @@ class _AntasPageState extends State<AntasPage> {
                             MaterialPageRoute(
                               builder: (_) => LessonScreen(
                                 id: widget.id,
-                                aralinId: widget.aralinId,
+                                aralinId: _currentAralinId, // FIX 9: Use dynamic ID
                                 sessionId: widget.sessionId,
                                 antasId: widget.antasId,
-                                lessonId: lessons[lessonIndex]['id'] ?? 0,
+                                lessonId: _currentAralinId, // FIX 10: Use dynamic ID
                               ),
                             ),
                           ).then((_) => _checkQuizCompletion());
