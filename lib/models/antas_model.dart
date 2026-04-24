@@ -48,9 +48,12 @@ class Aralin {
     return Aralin(
       id: json['id'] as int,
       aralin_no: json['aralin_no'] as int,
-      title: json['title'] as String,
-      details: json['details'] as String,
-      attachment_filename: json['attachment_filename'] as String,
+      // reads 'aralin_title' (new key from get-antas.php)
+      // falls back to 'title' for get-aralin.php which still uses old key
+      title: (json['aralin_title'] ?? json['title'] ?? '') as String,
+      // details and attachment_filename can be null in DB — guard them
+      details: (json['details'] ?? '') as String,
+      attachment_filename: (json['attachment_filename'] ?? '') as String,
     );
   }
 }

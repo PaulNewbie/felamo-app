@@ -463,7 +463,7 @@ class _AntasPageState extends State<AntasPage> {
                             Expanded(
                               child: Text(
                                 lessons.isNotEmpty && index < lessons.length
-                                    ? lessons[index]['title'] ?? 'Walang Pamagat'
+                                    ? lessons[index]['aralin_title'] ?? 'Walang Pamagat'
                                     : 'Aralin ${index + 1}',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -530,7 +530,7 @@ class _AntasPageState extends State<AntasPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            lessons[selectedLessonIndex ?? 0]['title'] ??
+                            lessons[selectedLessonIndex ?? 0]['aralin_title'] ??
                                 'Walang Pamagat',
                             style: const TextStyle(
                               color: Colors.white,

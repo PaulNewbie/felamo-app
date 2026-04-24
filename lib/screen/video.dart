@@ -503,7 +503,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
                           children: [
                             Text(
                               lessons.isNotEmpty && currentPlayingIndex < lessons.length
-                                  ? lessons[currentPlayingIndex]['title'] ?? 'Walang Pamagat'
+                                  ? lessons[currentPlayingIndex]['aralin_title'] ?? 'Walang Pamagat'
                                   : 'Walang Pamagat',
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
