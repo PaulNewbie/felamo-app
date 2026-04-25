@@ -616,13 +616,38 @@ class _QuizScreenState extends State<QuizScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Question label
-                      Text(
-                        'Tanong ${currentIndex + 1} (${_typeLabel(question['type'])})',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Colors.red[800],
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'Tanong ${currentIndex + 1}',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.red[800],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Question type badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red[200]!),
+                            ),
+                            child: Text(
+                              _typeLabel(question['type']),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.red[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // ── NEW: Difficulty badge ─────────────────────────────────────────
+                          _buildDifficultyBadge(question['difficulty']?.toString() ?? 'medium'),
+                        ],
                       ),
                       const SizedBox(height: 16),
 
@@ -973,5 +998,32 @@ class _QuizScreenState extends State<QuizScreen>
       case 'jumbled':        return 'Jumbled Words';
       default:               return type;
     }
+  }
+
+  Widget _buildDifficultyBadge(String difficulty) {
+    final Map<String, Map<String, dynamic>> config = {
+      'easy':   {'label': 'Madali',     'color': Colors.green[600]!,  'bg': Colors.green[50]!},
+      'medium': {'label': 'Katamtaman', 'color': Colors.orange[700]!, 'bg': Colors.orange[50]!},
+      'hard':   {'label': 'Mahirap',    'color': Colors.red[700]!,    'bg': Colors.red[50]!},
+    };
+
+    final cfg = config[difficulty.toLowerCase()] ?? config['medium']!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: cfg['bg'] as Color,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: (cfg['color'] as Color).withOpacity(0.4)),
+      ),
+      child: Text(
+        cfg['label'] as String,
+        style: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: cfg['color'] as Color,
+        ),
+      ),
+    );
   }
 }
