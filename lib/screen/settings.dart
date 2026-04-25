@@ -10,6 +10,7 @@ import 'package:http/io_client.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:felamo/baseurl/baseurl.dart';
+import 'package:felamo/screen/activity_board.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String sessionId;
@@ -295,12 +296,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 20),
                 _buildSettingsOption(
-                  icon: Icons.people,
-                  title: 'Tignan ang Tala ng Ranggo',
+                  icon: Icons.history_rounded,
+                  title: 'Talaan ng Aktibidad',
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => TalaNgRanggoScreen(sessionId: widget.sessionId)),
+                      MaterialPageRoute(
+                        builder: (context) => ActivityBoardScreen(
+                          sessionId: widget.sessionId,
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -427,6 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Color _getIconBackgroundColor(IconData icon) {
+    if (icon == Icons.history_rounded) return Colors.teal[300]!;
     if (icon == Icons.people) return Colors.blue[300]!;
     if (icon == Icons.notifications) return Colors.purple[300]!;
     if (icon == Icons.volume_up) return Colors.green[300]!;
