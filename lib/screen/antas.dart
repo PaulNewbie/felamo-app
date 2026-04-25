@@ -188,391 +188,515 @@ class _AntasPageState extends State<AntasPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFB71C1C),
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.25),
-            shape: BoxShape.circle,
+      backgroundColor: const Color(0xFFF4F6F9),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeroSection()),
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF4F6F9),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_quizCompleted == true) _buildPassBanner(),
+                  _buildSectionLabel('Daloy ng pag-aaral'),
+                  const SizedBox(height: 10),
+                  _buildLessonList(),
+                  const SizedBox(height: 22),
+                  _buildSectionLabel('Buod ng aralin'),
+                  const SizedBox(height: 10),
+                  _buildSummaryCard(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        title: const Text(
-          'Panimulang Antas',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        ],
       ),
-      body: SingleChildScrollView(
+    );
+  }
+
+Widget _buildHeroSection() {
+  return Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF8B0000), // deep maroon at top-left
+          Color(0xFFC62828), // standard red mid
+          Color(0xFFE57373), // soft rose at bottom-right
+        ],
+        stops: [0.0, 0.55, 2.0],
+      ),
+    ),
+    padding: const EdgeInsets.fromLTRB(20, 56, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Panimulang Antas',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: _buildActionCard(
+                icon: Icons.menu_book_rounded,
+                label: 'Modyul',
+                subtitle: 'Manood ng\nbidyong aralin',
+                color: const Color(0xFF1565C0),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LessonScreen(
+                        id: widget.id,
+                        aralinId: _currentAralinId,
+                        sessionId: widget.sessionId,
+                        antasId: widget.antasId,
+                        lessonId: _currentAralinId,
+                      ),
+                    ),
+                  ).then((_) => _checkQuizCompletion());
+                },
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: _buildQuizActionCard()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LessonScreen(
-                              id: widget.id,
-                              aralinId: _currentAralinId, // FIX 6: Use dynamic ID
-                              sessionId: widget.sessionId,
-                              antasId: widget.antasId,
-                              lessonId: _currentAralinId, // FIX 7: Use dynamic ID
-                            ),
-                          ),
-                        ).then((_) => _checkQuizCompletion());
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1976D2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.menu_book,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Modyul',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Text(
-                              'Manood ng\nBidyong Aralin',
-                              style: TextStyle(color: Colors.white, fontSize: 12),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _quizCheckDone ? _onQuizCardTapped : null,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _quizCardColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                _quizCardIcon,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _quizCardTitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              _quizCardSubtitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
-
-            if (_quizCompleted == true) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF388E3C), width: 1),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.verified, color: Color(0xFF388E3C), size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Matagumpay mong natapos ang pagsusulit na ito!',
-                        style: TextStyle(
-                          color: Color(0xFF2E7D32),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'Daloy ng Pag-aaral',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: List.generate(
-                  lessons.isNotEmpty ? lessons.length : 1,
-                  (index) {
-                    final isSelected = selectedLessonIndex == index;
-                    final isCompleted = completedLessonIndex == index;
-
-                    return GestureDetector(
-                      onTap: () {
-                        if (lessons.isNotEmpty && index < lessons.length) {
-                          setState(() {
-                            selectedLessonIndex = index;
-                            completedLessonIndex = index;
-                            _quizCheckDone = false; // Set to loading state
-                            _quizCompleted = null;  // Clear current status
-                          });
-                          
-                          // FIX 8: Check completion again for the NEW selected aralin
-                          _checkQuizCompletion();
-                        }
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        margin: EdgeInsets.only(
-                          bottom: index <
-                                  (lessons.isNotEmpty ? lessons.length - 1 : 0)
-                              ? 12
-                              : 0,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFFD32F2F).withOpacity(0.08)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFFD32F2F)
-                                : Colors.grey.shade300,
-                            width: isSelected ? 1.5 : 1.0,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isCompleted
-                                    ? Colors.green.withOpacity(0.15)
-                                    : Colors.grey.shade200,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                isCompleted
-                                    ? Icons.check_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: isCompleted
-                                    ? Colors.green[700]
-                                    : Colors.grey[600],
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                lessons.isNotEmpty && index < lessons.length
-                                    ? lessons[index]['aralin_title'] ?? 'Walang Pamagat'
-                                    : 'Aralin ${index + 1}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? const Color(0xFFD32F2F)
-                                      : Colors.black87,
-                                ),
-                                overflow: TextOverflow.visible,
-                                softWrap: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'Paksa at Buod ng Aralin',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            lessons.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD32F2F),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: GestureDetector(
-                      onTap: () {
-                        final lessonIndex = selectedLessonIndex ?? 0;
-                        if (lessonIndex < lessons.length) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LessonScreen(
-                                id: widget.id,
-                                aralinId: _currentAralinId, // FIX 9: Use dynamic ID
-                                sessionId: widget.sessionId,
-                                antasId: widget.antasId,
-                                lessonId: _currentAralinId, // FIX 10: Use dynamic ID
-                              ),
-                            ),
-                          ).then((_) => _checkQuizCompletion());
-                        }
-                      },
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            lessons[selectedLessonIndex ?? 0]['aralin_title'] ??
-                                'Walang Pamagat',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Buod: ${lessons[selectedLessonIndex ?? 0]['summary'] ?? 'Walang buod.'}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...?lessons[selectedLessonIndex ?? 0]['details']
-                                  ?.split('\n')
-                                  ?.map(
-                                    (detail) => Text(
-                                      '• $detail',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 14),
-                                    ),
-                                  )
-                                  ?.toList() ??
-                              [
-                                const Text(
-                                  '• Walang detalye.',
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 14),
-                                )
-                              ],
-                        ],
-                      ),
-                    ),
-                  ),
-
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 3),
+            Text(subtitle,
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.75),
+                    fontSize: 11,
+                    height: 1.4)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuizActionCard() {
+    Color cardColor;
+    IconData cardIcon;
+    String cardLabel;
+    String cardSubtitle;
+
+    if (!_quizCheckDone) {
+      cardColor = Colors.white.withOpacity(0.15);
+      cardIcon = Icons.hourglass_empty_rounded;
+      cardLabel = 'Naghihintay...';
+      cardSubtitle = 'Sinusuri ang\npagsusulit';
+    } else if (_quizCompleted == true) {
+      cardColor = const Color(0xFF2E7D32);
+      cardIcon = Icons.history_edu_rounded;
+      cardLabel = 'Kasaysayan';
+      cardSubtitle = 'Tingnan ang iyong\nmga sagot';
+    } else {
+      cardColor = const Color(0xFFE65100);
+      cardIcon = Icons.quiz_rounded;
+      cardLabel = 'Pagsusulit';
+      cardSubtitle = 'Magpatakbo ng\nmga pagsusulit';
+    }
+
+    return GestureDetector(
+      onTap: _quizCheckDone ? _onQuizCardTapped : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(cardIcon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(cardLabel,
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 3),
+            Text(cardSubtitle,
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.75),
+                    fontSize: 11,
+                    height: 1.4)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPassBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        border: Border.all(color: const Color(0xFFA5D6A7), width: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: const [
+          Icon(Icons.verified_rounded, color: Color(0xFF2E7D32), size: 18),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Matagumpay mong natapos ang pagsusulit na ito!',
+              style: TextStyle(
+                color: Color(0xFF2E7D32),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: Color(0xFF9E9E9E),
+        letterSpacing: 0.6,
+      ),
+    );
+  }
+
+  Widget _buildLessonList() {
+    if (lessons.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: CircularProgressIndicator(color: Color(0xFFC62828)),
+        ),
+      );
+    }
+
+    return Column(
+      children: List.generate(lessons.length, (index) {
+        final isSelected = selectedLessonIndex == index;
+        final isCompleted = completedLessonIndex == index;
+        final lessonTitle =
+            lessons[index]['aralin_title'] ?? 'Aralin ${index + 1}';
+
+        Color dotBg;
+        Widget dotIcon;
+        if (isSelected) {
+          dotBg = const Color(0xFFFFEBEE);
+          dotIcon = const Icon(Icons.play_arrow_rounded,
+              color: Color(0xFFC62828), size: 16);
+        } else if (isCompleted) {
+          dotBg = const Color(0xFFE8F5E9);
+          dotIcon = const Icon(Icons.check_rounded,
+              color: Color(0xFF2E7D32), size: 16);
+        } else {
+          dotBg = const Color(0xFFF0F0F0);
+          dotIcon = const Icon(Icons.circle_outlined,
+              color: Color(0xFF9E9E9E), size: 14);
+        }
+
+        return GestureDetector(
+          onTap: () {
+            if (lessons.isNotEmpty && index < lessons.length) {
+              setState(() {
+                selectedLessonIndex = index;
+                completedLessonIndex = index;
+                _quizCheckDone = false;
+                _quizCompleted = null;
+              });
+              _checkQuizCompletion();
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFC62828)
+                    : const Color(0xFFE0E0E0),
+                width: isSelected ? 1.5 : 0.5,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: dotBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(child: dotIcon),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lessonTitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFFC62828)
+                              : const Color(0xFF212121),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isSelected
+                            ? 'Kasalukuyang pinipili'
+                            : 'I-tap upang pumili',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFFBDBDBD), size: 18),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    if (lessons.isEmpty) return const SizedBox.shrink();
+
+    final idx = selectedLessonIndex ?? 0;
+    final title = lessons[idx]['aralin_title'] ?? 'Walang Pamagat';
+    final summary = lessons[idx]['summary'] ?? 'Walang buod.';
+    final details = (lessons[idx]['details'] ?? '') as String;
+
+    return Container(
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: const Color(0xFFE0E0E0), width: 0.5),
+      borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header strip
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            color: const Color(0xFFC62828),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.20),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Aralin ${idx + 1}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+          // Body
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F6F9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('Buod',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF757575))),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  summary,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF616161),
+                      height: 1.6),
+                ),
+                if (details.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ...details
+                      .split('\n')
+                      .where((d) => d.trim().isNotEmpty)
+                      .map(
+                        (d) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• ',
+                                  style: TextStyle(
+                                      color: Color(0xFFC62828), fontSize: 13)),
+                              Expanded(
+                                child: Text(d,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF616161),
+                                        height: 1.5)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ],
+                const SizedBox(height: 14),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LessonScreen(
+                          id: widget.id,
+                          aralinId: _currentAralinId,
+                          sessionId: widget.sessionId,
+                          antasId: widget.antasId,
+                          lessonId: _currentAralinId,
+                        ),
+                      ),
+                    ).then((_) => _checkQuizCompletion());
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.play_circle_rounded,
+                            color: Color(0xFFC62828), size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Panoorin ang bidyo',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFFC62828),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
