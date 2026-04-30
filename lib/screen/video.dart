@@ -10,7 +10,7 @@ class LessonScreen extends StatefulWidget {
   final int id;
   final int aralinId;
   final String sessionId;
-  final int antasId; 
+  final int antasId;
   final int lessonId;
 
   const LessonScreen({
@@ -18,15 +18,16 @@ class LessonScreen extends StatefulWidget {
     required this.id,
     required this.sessionId,
     required this.antasId,
-    required this.aralinId, 
-    required this.lessonId, 
+    required this.aralinId,
+    required this.lessonId,
   }) : super(key: key);
 
   @override
   _LessonScreenState createState() => _LessonScreenState();
 }
 
-class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _LessonScreenState extends State<LessonScreen>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   VideoPlayerController? _controller;
   bool isVideoInitialized = false;
   bool isVideoCompleted = false;
@@ -39,12 +40,16 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // ── Extra UI state ─────────────────────────────────────────────────────────
+  bool _showVideoControls = true;
+  bool _isBuffering = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -98,7 +103,6 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
           });
           print('Lessons fetched: ${lessons.length} lessons');
           if (lessons.isNotEmpty) {
-            // Find the index of the video the user actually clicked
             int targetIndex = 0;
             for (int i = 0; i < lessons.length; i++) {
               if (lessons[i]['id'].toString() == widget.lessonId.toString()) {
@@ -106,8 +110,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
                 break;
               }
             }
-            // Play that specific video instead of 0
-            initializeVideo(targetIndex); 
+            initializeVideo(targetIndex);
           } else {
             print('No lessons found');
             if (mounted) {
@@ -189,8 +192,7 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
       return;
     }
 
-    String videoUrl =
-        '${storageUrl}videos/${lesson['attachment_filename']}';
+    String videoUrl = '${storageUrl}videos/${lesson['attachment_filename']}';
     print('Initializing video: $videoUrl');
     currentPlayingIndex = index;
 
@@ -218,6 +220,13 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
               if (isEnded && !videoCompletionStatus[index]) {
                 print('Video $index completed at position: ${_controller!.value.position}');
                 _showCompletionDialog(index);
+              }
+              // Update buffering state for UI
+              if (mounted) {
+                final buffering = _controller!.value.isBuffering;
+                if (buffering != _isBuffering) {
+                  setState(() => _isBuffering = buffering);
+                }
               }
             }
           });
@@ -265,49 +274,89 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
         Widget? rewardImage;
 
         if (data['status'] == 'success' && firstWatch) {
-          // First time — show halo-halo reward
           titleMessage = '🎉 Nakakuha ka ng Halo-halo!';
           rewardImage  = Image.asset('assets/halohalo.png', height: 100);
         } else {
-          // Re-watch — quiz is unlocked again, no bonus
           titleMessage = 'Tapos na ang Re-watch!';
         }
 
         if (mounted) {
           await showDialog(
             context: context,
-            builder: (_) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text(titleMessage,
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (rewardImage != null) ...[rewardImage, const SizedBox(height: 10)],
-                  Text(
-                    firstWatch
-                        ? 'Nakatanggap ka ng $pointsReceived puntos!\nNaka-unlock na ang pagsusulit.'
-                        : 'Naka-unlock na muli ang pagsusulit. Subukang muli!',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(fontSize: 15),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('OK', style: GoogleFonts.poppins(color: Colors.blue)),
+            builder: (_) => Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              backgroundColor: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Trophy/reward icon
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: firstWatch ? const Color(0xFFFFF8E1) : const Color(0xFFE3F2FD),
+                        shape: BoxShape.circle,
+                      ),
+                      child: rewardImage != null
+                          ? ClipOval(child: rewardImage)
+                          : Icon(
+                              Icons.replay_rounded,
+                              color: const Color(0xFF1565C0),
+                              size: 42,
+                            ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      titleMessage,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1A1A1A),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: firstWatch ? const Color(0xFFFFF8E1) : const Color(0xFFE3F2FD),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        firstWatch
+                            ? 'Nakatanggap ka ng $pointsReceived puntos!\nNaka-unlock na ang pagsusulit.'
+                            : 'Naka-unlock na muli ang pagsusulit. Subukang muli!',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: firstWatch ? Colors.orange[800] : const Color(0xFF1565C0),
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB71C1C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        child: Text('OK, Sige!',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15)),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
-
-          // // Offer to go to the next video or the quiz
-          // if (index + 1 < lessons.length) {
-          //   _offerNextVideo(index);
-          // } else {
-          //   setState(() => allVideosCompleted = true);
-          // }
         }
       }
     } catch (e) {
@@ -322,367 +371,764 @@ class _LessonScreenState extends State<LessonScreen> with WidgetsBindingObserver
     });
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  String _formatDuration(Duration duration) {
+    final m = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  double get _videoProgress {
+    if (_controller == null || !isVideoInitialized) return 0.0;
+    final dur = _controller!.value.duration.inMilliseconds;
+    if (dur == 0) return 0.0;
+    return (_controller!.value.position.inMilliseconds / dur).clamp(0.0, 1.0);
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFB71C1C), Color(0xFFD32F2F)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      backgroundColor: const Color(0xFF0D0D0D),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: lessons.isEmpty
+            ? _buildLoadingState()
+            : isFullScreen
+                ? _buildFullScreenPlayer()
+                : _buildNormalLayout(),
+      ),
+    );
+  }
+
+  // ── Loading state ──────────────────────────────────────────────────────────
+
+  Widget _buildLoadingState() {
+    return Column(
+      children: [
+        _buildAppBarArea(),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: Color(0xFFB71C1C), strokeWidth: 2.5),
+                const SizedBox(height: 16),
+                Text('Naglo-load ng aralin...',
+                    style: GoogleFonts.poppins(fontSize: 14, color: Colors.white54)),
+              ],
             ),
           ),
         ),
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFD4A574),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-              print('Back button pressed, navigating back');
-            },
-          ),
-        ),
-        title: Text(
-          'Bidyo ng Aralin',
-          style: GoogleFonts.poppins(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF5F5F5), Color(0xFFE0E0E0)],
-          ),
-        ),
-        child: lessons.isEmpty
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFB71C1C)))
-            : FadeTransition(
-                opacity: _fadeAnimation,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isFullScreen && isVideoInitialized && _controller != null)
-                        GestureDetector(
-                          onTap: toggleFullScreen,
-                          child: Container(
-                            width: double.infinity,
-                            color: Colors.black,
-                            child: AspectRatio(
-                              aspectRatio: _controller!.value.aspectRatio,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  VideoPlayer(_controller!),
-                                  Positioned(
-                                    bottom: 16,
-                                    right: 16,
-                                    child: IconButton(
-                                      icon: Icon(Icons.fullscreen_exit, color: Colors.white.withOpacity(0.8), size: 32),
-                                      onPressed: toggleFullScreen,
-                                    ),
-                                  ),
-                                  if (!_controller!.value.isPlaying)
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _controller!.play();
-                                          print('Video playing');
-                                        });
-                                      },
-                                      child: Icon(Icons.play_circle_filled, size: 80, color: Colors.white.withOpacity(0.8)),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      else if (currentPlayingIndex < lessons.length && isVideoInitialized && _controller != null)
-                        GestureDetector(
-                          onTap: toggleFullScreen,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: AspectRatio(
-                                aspectRatio: _controller!.value.aspectRatio,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    VideoPlayer(_controller!),
-                                    Positioned(
-                                      bottom: 16,
-                                      right: 16,
-                                      child: IconButton(
-                                        icon: Icon(Icons.fullscreen, color: Colors.white.withOpacity(0.8), size: 32),
-                                        onPressed: toggleFullScreen,
-                                      ),
-                                    ),
-                                    if (!_controller!.value.isPlaying)
-                                      GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            _controller!.play();
-                                            print('Video playing');
-                                          });
-                                        },
-                                        child: Icon(Icons.play_circle_filled, size: 80, color: Colors.white.withOpacity(0.8)),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade800,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(Icons.lock_outline, color: Colors.white, size: 40),
-                          ),
-                        ),
-                      Container(
-                        margin: const EdgeInsets.all(16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              lessons.isNotEmpty && currentPlayingIndex < lessons.length
-                                  ? lessons[currentPlayingIndex]['aralin_title'] ?? 'Walang Pamagat'
-                                  : 'Walang Pamagat',
-                              style: GoogleFonts.poppins(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE3F2FD),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Mga Layunin sa Pagkatuto',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF0D47A1),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('• ', style: TextStyle(color: Color(0xFF0D47A1), fontSize: 16)),
-                                      Expanded(
-                                        child: Text(
-                                          lessons.isNotEmpty && currentPlayingIndex < lessons.length
-                                              ? lessons[currentPlayingIndex]['details'] ?? 'Walang detalye.'
-                                              : 'Walang detalye.',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            height: 1.5,
-                                            color: const Color(0xFF0D47A1),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFF8A65), Color(0xFFF4511E)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.orange.withOpacity(0.3),
-                                    spreadRadius: 2,
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: const Icon(Icons.star, color: Colors.white, size: 30),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Makakuha ng Halo-halo!',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          lessons.length > 1
-                                              ? 'Kumpletuhin ang bawat bidyong aralin upang makakuha ng 50 puntos.'
-                                              : 'Kumpletuhin ang bidyong aralin upang makakuha ng 100 puntos.',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            color: Colors.white,
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+      ],
+    );
+  }
 
-                      // NEW QUIZ BUTTON - Only shows if videos are done!
-                      if (allVideosCompleted)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          padding: const EdgeInsets.only(bottom: 24),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _controller?.pause();
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => QuizScreen(
-                                    antasId: widget.antasId,
-                                    sessionId: widget.sessionId,
-                                    aralinId: widget.aralinId,
-                                  ),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[700],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: Text(
-                              'Pumunta sa Pagsusulit',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                    ],
+  // ── Full screen player ─────────────────────────────────────────────────────
+
+  Widget _buildFullScreenPlayer() {
+    return GestureDetector(
+      onTap: () {
+        setState(() => _showVideoControls = !_showVideoControls);
+      },
+      child: Container(
+        color: Colors.black,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isVideoInitialized && _controller != null)
+              AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              ),
+
+            // Buffering spinner
+            if (_isBuffering)
+              const CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+
+            // Controls overlay
+            if (_showVideoControls) ...[
+              // Dark gradient overlay
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xCC000000), Colors.transparent, Colors.transparent, Color(0xCC000000)],
+                    stops: [0.0, 0.25, 0.75, 1.0],
                   ),
                 ),
               ),
-      ),
-      floatingActionButton: isVideoInitialized && !isFullScreen && _controller != null
-          ? FloatingActionButton(
-              onPressed: () {
-                setState(() {
-                  if (_controller!.value.isPlaying) {
-                    _controller!.pause();
-                    print('Video paused');
-                  } else {
-                    _controller!.play();
-                    print('Video playing');
-                  }
-                });
-              },
-              backgroundColor: const Color(0xFFB71C1C),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Icon(
-                _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 32,
+              // Top bar
+              Positioned(
+                top: 40,
+                left: 16,
+                right: 16,
+                child: Row(
+                  children: [
+                    _circleButton(Icons.fullscreen_exit_rounded, toggleFullScreen),
+                    const Spacer(),
+                    Text(
+                      lessons.isNotEmpty ? lessons[currentPlayingIndex]['aralin_title'] ?? '' : '',
+                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    const SizedBox(width: 40),
+                  ],
+                ),
               ),
-            )
-          : null,
+              // Center play/pause
+              _buildCenterPlayButton(),
+              // Bottom bar
+              Positioned(
+                bottom: 24,
+                left: 16,
+                right: 16,
+                child: _buildVideoProgressBar(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Normal (non-fullscreen) layout ─────────────────────────────────────────
+
+  Widget _buildNormalLayout() {
+    final lesson = lessons.isNotEmpty && currentPlayingIndex < lessons.length
+        ? lessons[currentPlayingIndex]
+        : null;
+    final title  = lesson?['aralin_title'] ?? 'Walang Pamagat';
+    final details = (lesson?['details'] ?? '') as String;
+
+    return Column(
+      children: [
+        // App bar
+        _buildAppBarArea(),
+
+        // ── VIDEO PLAYER ────────────────────────────────────────────────────
+        _buildInlineVideoPlayer(),
+
+        // ── SCROLLABLE INFO ─────────────────────────────────────────────────
+        Expanded(
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F3F0),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+
+                  // Title
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1A1A1A),
+                      height: 1.3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Lesson badge row
+                  Row(
+                    children: [
+                      _infoBadge(
+                        Icons.menu_book_rounded,
+                        'Aralin ${currentPlayingIndex + 1} ng ${lessons.length}',
+                        const Color(0xFFB71C1C),
+                        const Color(0xFFFFEBEE),
+                      ),
+                      const SizedBox(width: 8),
+                      if (isVideoCompleted)
+                        _infoBadge(
+                          Icons.check_circle_rounded,
+                          'Tapos na',
+                          const Color(0xFF2E7D32),
+                          const Color(0xFFE8F5E9),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Objectives card
+                  if (details.isNotEmpty) _buildObjectivesCard(details),
+
+                  const SizedBox(height: 16),
+
+                  // Reward banner
+                  _buildRewardBanner(),
+
+                  // Quiz button — appears as soon as video is done
+                  if (isVideoCompleted) ...[
+                    const SizedBox(height: 20),
+                    _buildGoToQuizButton(),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── App bar ────────────────────────────────────────────────────────────────
+
+  Widget _buildAppBarArea() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8B0000), Color(0xFFB71C1C), Color(0xFFD32F2F)],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  print('Back button pressed, navigating back');
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bidyo ng Aralin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (lessons.isNotEmpty)
+                      Text(
+                        lessons[currentPlayingIndex]['aralin_title'] ?? '',
+                        style: GoogleFonts.poppins(fontSize: 11, color: Colors.white.withOpacity(0.72)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Inline video player with custom controls overlay ───────────────────────
+
+  Widget _buildInlineVideoPlayer() {
+    return GestureDetector(
+      onTap: () {
+        if (isVideoInitialized && _controller != null) {
+          setState(() {
+            if (_controller!.value.isPlaying) {
+              _controller!.pause();
+            } else {
+              _controller!.play();
+            }
+          });
+        } else {
+          toggleFullScreen();
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        color: Colors.black,
+        child: AspectRatio(
+          aspectRatio: isVideoInitialized && _controller != null
+              ? _controller!.value.aspectRatio
+              : 16 / 9,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Video or placeholder
+              if (isVideoInitialized && _controller != null)
+                VideoPlayer(_controller!)
+              else
+                Container(
+                  color: const Color(0xFF1A1A1A),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(color: Color(0xFFB71C1C), strokeWidth: 2.5),
+                      const SizedBox(height: 14),
+                      Text('Inihahanda ang bidyo...',
+                          style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13)),
+                    ],
+                  ),
+                ),
+
+              // Buffering spinner
+              if (_isBuffering && isVideoInitialized)
+                Container(
+                  color: Colors.black38,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+                  ),
+                ),
+
+              // Play/pause overlay when paused
+              if (isVideoInitialized && _controller != null && !_controller!.value.isPlaying && !_isBuffering)
+                Container(
+                  color: Colors.black26,
+                  child: _buildCenterPlayButton(),
+                ),
+
+              // Bottom gradient + progress bar + fullscreen button
+              if (isVideoInitialized && _controller != null)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Color(0xDD000000), Colors.transparent],
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(12, 20, 12, 10),
+                    child: Column(
+                      children: [
+                        _buildVideoProgressBar(),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // Current / total time
+                            ValueListenableBuilder(
+                              valueListenable: _controller!,
+                              builder: (_, VideoPlayerValue val, __) {
+                                return Text(
+                                  '${_formatDuration(val.position)}  /  ${_formatDuration(val.duration)}',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
+                            ),
+                            const Spacer(),
+                            // Fullscreen button
+                            GestureDetector(
+                              onTap: toggleFullScreen,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Center play button ─────────────────────────────────────────────────────
+
+  Widget _buildCenterPlayButton() {
+    final isPlaying = isVideoInitialized && _controller != null && _controller!.value.isPlaying;
+    return GestureDetector(
+      onTap: () {
+        if (isVideoInitialized && _controller != null) {
+          setState(() {
+            if (_controller!.value.isPlaying) {
+              _controller!.pause();
+            } else {
+              _controller!.play();
+            }
+          });
+        }
+      },
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
+        ),
+        child: Icon(
+          isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: Colors.white,
+          size: 34,
+        ),
+      ),
+    );
+  }
+
+  // ── Seek bar ───────────────────────────────────────────────────────────────
+
+  Widget _buildVideoProgressBar() {
+    if (!isVideoInitialized || _controller == null) return const SizedBox.shrink();
+
+    return ValueListenableBuilder(
+      valueListenable: _controller!,
+      builder: (_, VideoPlayerValue val, __) {
+        final dur = val.duration.inMilliseconds;
+        final pos = val.position.inMilliseconds.clamp(0, dur);
+        final progress = dur > 0 ? pos / dur : 0.0;
+
+        return SliderTheme(
+          data: SliderThemeData(
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+            activeTrackColor: const Color(0xFFB71C1C),
+            inactiveTrackColor: Colors.white24,
+            thumbColor: Colors.white,
+            overlayColor: Colors.white24,
+          ),
+          child: Slider(
+            value: progress.toDouble(),
+            onChanged: (v) {
+              final newPos = Duration(milliseconds: (v * dur).toInt());
+              _controller!.seekTo(newPos);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Lesson objectives card ─────────────────────────────────────────────────
+
+  Widget _buildObjectivesCard(String details) {
+    final lines = details.split('\n').where((d) => d.trim().isNotEmpty).toList();
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.flag_rounded, color: Color(0xFF1565C0), size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Mga Layunin sa Pagkatuto',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1565C0),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Body
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: lines.map((line) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 5),
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1565C0),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          line,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF424242),
+                            height: 1.6,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Reward banner ──────────────────────────────────────────────────────────
+
+  Widget _buildRewardBanner() {
+    final hasMultiple = lessons.length > 1;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFB71C1C), Color(0xFFE53935)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFB71C1C).withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.emoji_food_beverage_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Makakuha ng Halo-halo!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasMultiple
+                      ? 'Kumpletuhin ang bawat bidyo para makakuha ng 50 puntos.'
+                      : 'Kumpletuhin ang bidyo para makakuha ng 100 puntos.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.82),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.7), size: 22),
+        ],
+      ),
+    );
+  }
+
+  // ── Go to quiz button ──────────────────────────────────────────────────────
+
+  Widget _buildGoToQuizButton() {
+    return GestureDetector(
+      onTap: () {
+        _controller?.pause();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuizScreen(
+              antasId: widget.antasId,
+              sessionId: widget.sessionId,
+              aralinId: widget.aralinId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF388E3C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E7D32).withOpacity(0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon bubble
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: const Icon(Icons.quiz_rounded, color: Colors.white, size: 26),
+            ),
+            const SizedBox(width: 14),
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Handa ka na!',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.78),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Pumunta sa Pagsusulit',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Arrow
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Small helpers ──────────────────────────────────────────────────────────
+
+  Widget _circleButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.18),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+
+  Widget _infoBadge(IconData icon, String label, Color color, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(label,
+              style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: GoogleFonts.poppins(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[500],
+        letterSpacing: 0.8,
+      ),
     );
   }
 }
