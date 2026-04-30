@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart'; // ADDED for saving state
 import 'package:felamo/screen/quiz_history.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -52,7 +53,6 @@ class _QuizScreenState extends State<QuizScreen>
   late Animation<double>   _fadeAnimation;
 
   // ── Jumbled word helpers ───────────────────────────────────────────────────
-  /// Returns a scrambled version of [word] guaranteed to differ from original
   String _scrambleWord(String word) {
     if (word.length <= 1) return word;
     final chars = word.toUpperCase().split('');
@@ -80,7 +80,6 @@ class _QuizScreenState extends State<QuizScreen>
       curve: Curves.easeInOut,
     );
     fetchQuestions();
-    _startTimer();
     _animationController.forward();
   }
 
@@ -114,11 +113,101 @@ class _QuizScreenState extends State<QuizScreen>
     return '$m:$s';
   }
 
+  // ── State Management Helpers (ADDED) ───────────────────────────────────────
+  Future<void> _saveQuizState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String stateKey = 'quiz_state_${widget.aralinId}_${widget.sessionId}';
+
+    // JSON requires string keys for Maps, so we convert userAnswers keys to strings
+    final Map<String, dynamic> stateData = {
+      'assessmentId': assessmentId,
+      'questions': questions,
+      'currentIndex': currentIndex,
+      'timeRemaining': _timeRemaining.inSeconds,
+      'multipleChoiceAnswers': multipleChoiceAnswers,
+      'trueOrFalseAnswers': trueOrFalseAnswers,
+      'identificationAnswers': identificationAnswers,
+      'jumbledWordsAnswers': jumbledWordsAnswers,
+      'userAnswers': userAnswers.map((key, value) => MapEntry(key.toString(), value)),
+    };
+
+    await prefs.setString(stateKey, jsonEncode(stateData));
+  }
+
+  Future<void> _clearQuizState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String stateKey = 'quiz_state_${widget.aralinId}_${widget.sessionId}';
+    await prefs.remove(stateKey);
+  }
+
+  Future<bool> _showExitConfirmation() async {
+    bool exitQuiz = false;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Kumpirmasyon', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text('Sigurado ka bang gusto mong lumabas sa pagsusulit na ito?\n\nAng iyong progreso ay awtomatikong mase-save.', 
+            style: GoogleFonts.poppins()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Manatili', style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              exitQuiz = true;
+              Navigator.of(context).pop(true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC62828),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Lumabas', style: GoogleFonts.poppins(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    return exitQuiz;
+  }
+
   // ── Fetch questions from server ────────────────────────────────────────────
   Future<void> fetchQuestions() async {
     if (mounted) setState(() => isLoading = true);
 
     try {
+      // 1. CHECK FOR SAVED STATE FIRST (ADDED)
+      final prefs = await SharedPreferences.getInstance();
+      final String stateKey = 'quiz_state_${widget.aralinId}_${widget.sessionId}';
+      final String? savedState = prefs.getString(stateKey);
+
+      if (savedState != null) {
+        final data = jsonDecode(savedState);
+        if (mounted) {
+          setState(() {
+            assessmentId = data['assessmentId'];
+            questions = List<Map<String, dynamic>>.from(data['questions']);
+            currentIndex = data['currentIndex'];
+            _timeRemaining = Duration(seconds: data['timeRemaining']);
+
+            multipleChoiceAnswers = List<Map<String, dynamic>>.from(data['multipleChoiceAnswers']);
+            trueOrFalseAnswers = List<Map<String, dynamic>>.from(data['trueOrFalseAnswers']);
+            identificationAnswers = List<Map<String, dynamic>>.from(data['identificationAnswers']);
+            jumbledWordsAnswers = List<Map<String, dynamic>>.from(data['jumbledWordsAnswers']);
+
+            if (data['userAnswers'] != null) {
+              userAnswers = (data['userAnswers'] as Map<String, dynamic>)
+                  .map((key, value) => MapEntry(int.parse(key), value.toString()));
+            }
+
+            isLoading = false;
+          });
+          _startTimer();
+        }
+        return; // Exit function so we don't fetch new questions from backend
+      }
+
+      // 2. IF NO SAVED STATE, FETCH NEW FROM BACKEND
       final response = await http.post(
         Uri.parse("${baseUrl}get-assessment.php"),
         headers: {'Content-Type': 'application/json'},
@@ -203,15 +292,14 @@ class _QuizScreenState extends State<QuizScreen>
 
       for (var q in (data['data']?['jumbled_words'] ?? [])) {
         if (q['id'] == null || q['question'] == null) continue;
-        // Pre-compute scrambled letters once per question
         final correctWord = (q['answer'] ?? '').toString();
         final scrambled   = _scrambleWord(correctWord);
         loadedQuestions.add({
           'type':           'jumbled',
           'id':             q['id'],
-          'question':       q['question'],   // instruction text from DB
+          'question':       q['question'],   
           'correct_answer': correctWord,
-          'scrambled':      scrambled,       // pre-computed scramble for display
+          'scrambled':      scrambled,       
           'difficulty':     q['difficulty'] ?? 'medium',
         });
       }
@@ -228,6 +316,7 @@ class _QuizScreenState extends State<QuizScreen>
           questions  = loadedQuestions;
           isLoading  = false;
         });
+        _startTimer();
       }
     } catch (e) {
       _showFetchError('May nangyaring mali sa koneksyon: $e');
@@ -262,6 +351,8 @@ class _QuizScreenState extends State<QuizScreen>
 
     userAnswers[currentIndex] = answer;
     _recordAnswer(question, answer);
+    
+    _saveQuizState(); // SAVE PROGRESS AFTER ANSWERING (ADDED)
 
     if (currentIndex < questions.length - 1) {
       setState(() {
@@ -325,18 +416,21 @@ class _QuizScreenState extends State<QuizScreen>
         final data = jsonDecode(response.body);
 
         if (data['status'] == 'success') {
+          await _clearQuizState(); // CLEAR SAVED STATE ON SUCCESS (ADDED)
           final int rawPoints   = data['raw_points']   ?? 0;
           final int totalItems  = data['total_items']  ?? questions.length;
           final int bonusPoints = data['bonus_points'] ?? 0;
           final bool firstPass  = data['first_pass']   ?? true;
           _showPassDialog(rawPoints, totalItems, bonusPoints, firstPass);
         } else if (data['status'] == 'failed') {
+          await _clearQuizState(); // CLEAR SAVED STATE ON FAIL (ADDED)
           final int rawPoints  = data['raw_points']  ?? 0;
           final int totalItems = data['total_items'] ?? questions.length;
           final int pct        = data['percentage']  ?? 0;
           final int attempts   = data['attempts']    ?? 1;
           _showFailDialog(rawPoints, totalItems, pct, attempts);
         } else if (data['status'] == 'already_taken') {
+          await _clearQuizState(); // CLEAR SAVED STATE IF ALREADY TAKEN (ADDED)
           _showAlreadyTakenDialog();
         } else {
           _showFetchError(data['message'] ?? 'Hindi maibigay ang resulta.');
@@ -462,30 +556,45 @@ class _QuizScreenState extends State<QuizScreen>
 
     final question = questions[currentIndex];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          children: [
-            _buildTopBar(),
-            _buildProgressSection(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildQuestionCard(question),
-                    const SizedBox(height: 16),
-                    _buildAnswerSection(question),
-                    const SizedBox(height: 20),
-                    _buildNextButton(question),
-                  ],
+    // Wrap the Scaffold with PopScope to intercept device back button
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        final bool shouldPop = await _showExitConfirmation();
+        if (shouldPop) {
+          _timer?.cancel();
+          await _saveQuizState();
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5F5),
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            children: [
+              _buildTopBar(),
+              _buildProgressSection(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildQuestionCard(question),
+                      const SizedBox(height: 16),
+                      _buildAnswerSection(question),
+                      const SizedBox(height: 20),
+                      _buildNextButton(question),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -540,10 +649,17 @@ class _QuizScreenState extends State<QuizScreen>
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Row(
             children: [
-              // Back button
+              // Back button (UPDATED TO TRIGGER EXIT DIALOG)
               _CircleButton(
                 icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () { _timer?.cancel(); Navigator.pop(context); },
+                onTap: () async {
+                  final bool shouldPop = await _showExitConfirmation();
+                  if (shouldPop) {
+                    _timer?.cancel();
+                    await _saveQuizState();
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
               ),
               const SizedBox(width: 12),
               // Title
@@ -1047,21 +1163,19 @@ class _TypeBadge extends StatelessWidget {
   }
 }
 
-/// Difficulty badge — FIX: maps raw DB strings (easy/medium/hard) correctly
+/// Difficulty badge
 class _DifficultyBadge extends StatelessWidget {
   final String difficulty;
   const _DifficultyBadge({required this.difficulty});
 
   @override
   Widget build(BuildContext context) {
-    // Normalise: trim, lowercase — handles any whitespace/case from DB
     final d = difficulty.trim().toLowerCase();
 
     String label;
     Color color;
     Color bg;
 
-    // Explicit mapping so only exact strings match
     if (d == 'easy') {
       label = 'Madali';
       color = const Color(0xFF2E7D32);
@@ -1071,7 +1185,6 @@ class _DifficultyBadge extends StatelessWidget {
       color = const Color(0xFFC62828);
       bg    = const Color(0xFFFFEBEE);
     } else {
-      // 'medium' or anything else defaults here
       label = 'Katamtaman';
       color = const Color(0xFFE65100);
       bg    = const Color(0xFFFFF3E0);
