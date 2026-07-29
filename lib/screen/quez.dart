@@ -273,7 +273,7 @@ class _QuizScreenState extends State<QuizScreen>
           'type':           'boolean',
           'id':             q['id'],
           'question':       q['question'],
-          'choices':        {'A': 'Tama', 'B': 'Mali'},
+          'choices':        {'A': 'Fact', 'B': 'Bluff'},
           'correct_answer': q['answer'] == 1 ? 'A' : 'B',
           'difficulty':     q['difficulty'] ?? 'medium',
         });
@@ -1096,7 +1096,7 @@ class _QuizScreenState extends State<QuizScreen>
   String _instructionFor(String type) {
     switch (type) {
       case 'multiple': return 'Piliin ang tamang sagot';
-      case 'boolean':  return 'Tama o Mali?';
+      case 'boolean':  return 'Fact o Bluff?';
       case 'identification': return 'Isulat ang tamang sagot';
       case 'jumbled':  return 'Ayusin ang mga titik para makabuo ng tamang salita';
       default:         return '';
@@ -1106,7 +1106,7 @@ class _QuizScreenState extends State<QuizScreen>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPPORTING WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════
+// ════
 
 /// Circular icon button used in the top bar
 class _CircleButton extends StatelessWidget {
@@ -1140,7 +1140,7 @@ class _TypeBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, _BadgeConfig> cfg = {
       'multiple':       _BadgeConfig('Multiple Choice', const Color(0xFF1565C0), const Color(0xFFE3F2FD)),
-      'boolean':        _BadgeConfig('Tama o Mali',     const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
+      'boolean':        _BadgeConfig('Fact o Bluff',     const Color(0xFF2E7D32), const Color(0xFFE8F5E9)),
       'identification': _BadgeConfig('Identification',  const Color(0xFF6A1B9A), const Color(0xFFF3E5F5)),
       'jumbled':        _BadgeConfig('Jumbled Word',    const Color(0xFFE65100), const Color(0xFFFFF3E0)),
     };

@@ -62,7 +62,7 @@ class _QuizHistoryScreenState extends State<QuizHistoryScreen> {
       return choices[raw.toUpperCase()] ?? raw;
     }
     if (type == 'true_false') {
-      return raw == '1' ? 'Tama (True)' : 'Mali (False)';
+      return raw == '1' ? 'Fact' : 'Bluff';
     }
     return raw;
   }
@@ -253,7 +253,7 @@ class _QuizHistoryScreenState extends State<QuizHistoryScreen> {
       case 'multiple_choice':
         return 'Multiple Choice';
       case 'true_false':
-        return 'Tama o Mali';
+        return 'Fact o Bluff';
       case 'identification':
         return 'Pagpapakilala';
       case 'jumbled_word':
