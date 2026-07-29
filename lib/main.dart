@@ -5,23 +5,38 @@ import 'package:felamo/screen/video.dart';
 import 'package:felamo/user/login.dart';
 import 'package:felamo/user/profile.dart';
 import 'package:felamo/user/verification.dart';
+import 'package:felamo/services/font_scale_controller.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await fontScaleController.load(); // restore saved preference before UI builds
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Felamo',
-      theme: ThemeData(),
-      home: const SplashScreen(),
-      debugShowCheckedModeBanner: false, // Add this line to remove the debug banner
+    return AnimatedBuilder(
+      animation: fontScaleController,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'Felamo',
+          theme: ThemeData(),
+          home: const SplashScreen(),
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(fontScaleController.scale),
+              ),
+              child: child!,
+            );
+          },
+        );
+      },
     );
   }
 }

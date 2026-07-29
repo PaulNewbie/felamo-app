@@ -12,6 +12,8 @@ import 'dart:convert';
 import 'package:felamo/baseurl/baseurl.dart';
 import 'package:felamo/screen/activity_board.dart';
 
+import 'package:felamo/services/font_scale_controller.dart';
+
 class SettingsScreen extends StatefulWidget {
   final String sessionId;
   final String email;
@@ -31,7 +33,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _soundEffectsEnabled = true;
-  bool _darkModeEnabled = false;
+  // bool _darkModeEnabled = false;
 
   void _showChangePasswordModal() {
     final TextEditingController currentPasswordController = TextEditingController();
@@ -195,6 +197,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showFontSizeModal() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Sukat ng Font',
+                style: GoogleFonts.leagueSpartan(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: AppFontSize.values.map((size) {
+                  final isSelected = fontScaleController.fontSize == size;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () async {
+                        await fontScaleController.setFontSize(size);
+                        setModalState(() {});
+                        setState(() {}); // refresh the label shown in settings row
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF330006).withOpacity(0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? const Color(0xFF330006) : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.check_circle : Icons.circle_outlined,
+                              color: isSelected ? const Color(0xFF330006) : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              size.label,
+                              style: GoogleFonts.leagueSpartan(
+                                fontSize: 16 * size.scale, // live preview of the size
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Isara', style: GoogleFonts.leagueSpartan(color: const Color(0xFF330006))),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -223,162 +296,173 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.all(20),
-            width: MediaQuery.of(context).size.width * 0.9,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE9DFC7),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => Profile(sessionId: widget.sessionId)),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF330006).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(25),
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(Icons.person, color: Colors.white, size: 30),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.firstName,
-                                style: GoogleFonts.leagueSpartan(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Ranggo #5 - 2050 puntos',
-                                style: GoogleFonts.leagueSpartan(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                widget.email,
-                                style: GoogleFonts.leagueSpartan(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios, color: Colors.black54),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildSettingsOption(
-                  icon: Icons.history_rounded,
-                  title: 'Talaan ng Aktibidad',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ActivityBoardScreen(
-                          sessionId: widget.sessionId,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                _buildSettingsOptionWithSwitch(
-                  icon: Icons.notifications,
-                  title: 'Setting ng Notipikasyon',
-                  value: _notificationsEnabled,
-                  onChanged: (value) => setState(() => _notificationsEnabled = value),
-                ),
-                _buildSettingsOptionWithSwitch(
-                  icon: Icons.volume_up,
-                  title: 'Mga Sound Effect',
-                  value: _soundEffectsEnabled,
-                  onChanged: (value) => setState(() => _soundEffectsEnabled = value),
-                ),
-                _buildSettingsOptionWithSwitch(
-                  icon: Icons.dark_mode,
-                  title: 'Dark Mode',
-                  value: _darkModeEnabled,
-                  onChanged: (value) => setState(() => _darkModeEnabled = value),
-                ),
-                _buildSettingsOption(
-                  icon: Icons.brush,
-                  title: 'Palitan ang Avatar Border',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => MyWidget(sessionId: widget.sessionId)),
-                    );
-                  },
-                ),
-                _buildSettingsOption(
-                  icon: Icons.info,
-                  title: 'About',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => About()),
-                    );
-                  },
-                ),
-                _buildSettingsOption(
-                  icon: Icons.lock,
-                  title: 'Palitan ang Password',
-                  onTap: _showChangePasswordModal,
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF330006),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pushAndRemoveUntil(
+        child: SingleChildScrollView(
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(20),
+              width: MediaQuery.of(context).size.width * 0.9,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE9DFC7),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const Login()),
-                        (Route<dynamic> route) => false, // Clears everything from the previous session
+                        MaterialPageRoute(builder: (context) => Profile(sessionId: widget.sessionId)),
                       );
                     },
-                    child: Text(
-                      'Mag Log-Out',
-                      style: GoogleFonts.leagueSpartan(
-                        color: Colors.white,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF330006).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.person, color: Colors.white, size: 30),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.firstName,
+                                  style: GoogleFonts.leagueSpartan(
+                                    color: Colors.black,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Ranggo #5 - 2050 puntos',
+                                  style: GoogleFonts.leagueSpartan(
+                                    color: Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  widget.email,
+                                  style: GoogleFonts.leagueSpartan(
+                                    color: Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, color: Colors.black54),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  _buildSettingsOption(
+                    icon: Icons.history_rounded,
+                    title: 'Talaan ng Aktibidad',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ActivityBoardScreen(
+                            sessionId: widget.sessionId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildSettingsOptionWithSwitch(
+                    icon: Icons.notifications,
+                    title: 'Notipikasyon',
+                    value: _notificationsEnabled,
+                    onChanged: (value) => setState(() => _notificationsEnabled = value),
+                  ),
+                  _buildSettingsOptionWithSwitch(
+                    icon: Icons.volume_up,
+                    title: 'Mga Sound Effect',
+                    value: _soundEffectsEnabled,
+                    onChanged: (value) => setState(() => _soundEffectsEnabled = value),
+                  ),
+                  // _buildSettingsOptionWithSwitch(
+                  //   icon: Icons.dark_mode,
+                  //   title: 'Dark Mode',
+                  //   value: _darkModeEnabled,
+                  //   onChanged: (value) => setState(() => _darkModeEnabled = value),
+                  // ),
+
+                  _buildSettingsOption(
+                    icon: Icons.text_fields,
+                    title: 'Sukat ng Font (${fontScaleController.fontSize.label})',
+                    onTap: _showFontSizeModal,
+                  ),
+
+                  _buildSettingsOption(
+                    icon: Icons.brush,
+                    title: 'Avatar Border',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => MyWidget(sessionId: widget.sessionId)),
+                      );
+                    },
+                  ),
+                  _buildSettingsOption(
+                    icon: Icons.info,
+                    title: 'About',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => About()),
+                      );
+                    },
+                  ),
+                  _buildSettingsOption(
+                    icon: Icons.lock,
+                    title: 'Palitan ang Password',
+                    onTap: _showChangePasswordModal,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF330006),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => const Login()),
+                          (Route<dynamic> route) => false, // Clears everything from the previous session
+                        );
+                      },
+                      child: Text(
+                        'Mag Log-Out',
+                        style: GoogleFonts.leagueSpartan(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
             ),
           ),
         ),

@@ -264,7 +264,7 @@ class _ProfileState extends State<Profile> {
                       const SizedBox(height: 10),
                       _buildTextField(label: 'Last Name', controller: _lastNameController),
                       const SizedBox(height: 10),
-                      _buildTextField(label: 'LRN', controller: _lrnController, keyboardType: TextInputType.number),
+                      _buildTextField(label: 'LRN', controller: _lrnController, keyboardType: TextInputType.number, readOnly: true),
                       const SizedBox(height: 10),
                       _buildTextField(
                         label: 'Birth Date',
@@ -276,7 +276,7 @@ class _ProfileState extends State<Profile> {
                       const SizedBox(height: 10),
                       _buildGenderDropdown(),
                       const SizedBox(height: 10),
-                      _buildTextField(label: 'Email', controller: _emailController, keyboardType: TextInputType.emailAddress),
+                      _buildTextField(label: 'Email', controller: _emailController, keyboardType: TextInputType.emailAddress, readOnly: true),
                       const SizedBox(height: 15),
                       Center(
                         child: ElevatedButton(
@@ -333,9 +333,14 @@ class _ProfileState extends State<Profile> {
           keyboardType: keyboardType,
           readOnly: readOnly,
           onTap: onTap,
+          style: GoogleFonts.leagueSpartan(
+            fontSize: 14,
+            color: readOnly ? Colors.black45 : Colors.black87,
+            fontWeight: FontWeight.w400,
+          ),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white,
+            fillColor: readOnly ? Colors.grey.shade200 : Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -346,15 +351,12 @@ class _ProfileState extends State<Profile> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFB71C1C)),
+              borderSide: BorderSide(
+                color: readOnly ? Colors.grey.shade300 : const Color(0xFFB71C1C),
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            suffixIcon: suffixIcon,
-          ),
-          style: GoogleFonts.leagueSpartan(
-            fontSize: 14,
-            color: Colors.black87,
-            fontWeight: FontWeight.w400,
+            suffixIcon: readOnly ? const Icon(Icons.lock_outline, size: 18, color: Colors.grey) : suffixIcon,
           ),
           validator: (value) {
             if (value == null || value.isEmpty) return 'This field is required';
