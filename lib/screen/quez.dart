@@ -1173,15 +1173,15 @@ class _DifficultyBadge extends StatelessWidget {
     Color bg;
 
     if (d == 'easy') {
-      label = 'Madali';
+      label = 'Easy';
       color = const Color(0xFF2E7D32);
       bg    = const Color(0xFFE8F5E9);
     } else if (d == 'hard') {
-      label = 'Mahirap';
+      label = 'Difficult';
       color = const Color(0xFFC62828);
       bg    = const Color(0xFFFFEBEE);
     } else {
-      label = 'Katamtaman';
+      label = 'Avg';
       color = const Color(0xFFE65100);
       bg    = const Color(0xFFFFF3E0);
     }

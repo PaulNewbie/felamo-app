@@ -6,7 +6,7 @@
 
 // const String domainUrl = 'http://127.0.0.1:8080/felamo'; // Localhost server
 
-const String domainUrl = 'https://silver-jackal-391644.hostingersite.com'; // Live server
+const String domainUrl = 'https://felamo.online'; // Live server
 
 
 const String baseUrl = '$domainUrl/backend/api/app/';
